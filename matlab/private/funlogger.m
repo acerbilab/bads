@@ -84,13 +84,30 @@ switch lower(state)
         % Heteroscedastic noise?
         if isfield(optimState,'S'); hescnoise = 1; else hescnoise = 0; end
         
-        tic
-        if hescnoise
-            [fval,fsd] = fun(x);
-        else
-            fval = fun(x);
+        try
+            tic
+            if hescnoise
+                [fval,fsd] = fun(x);
+            else
+                fval = fun(x);
+            end
+            t = toc;
+            
+            % Check returned function value
+            if ~isfinite(fval) || ~isscalar(fval) || ~isreal(fval)
+                error(['The returned function value must be a finite real-valued scalar (returned value: ' mat2str(fval) ').']);
+            end
+            
+            % Check returned function SD
+            if hescnoise && (~isfinite(fsd) || ~isscalar(fsd) || ~isreal(fsd) || fsd <= 0.0)
+                error(['The returned estimated SD (second function output) must be a finite, non-negative real-valued scalar (returned SD: ' mat2str(fsd) ').']);
+            end            
+            
+        catch fun_error
+            warning(['Error in executing the logged function ''' func2str(fun) ''' with input: ' mat2str(x)]);
+            rethrow(fun_error);
         end
-        t = toc;
+        
 
         % Update function records
         optimState.funccount = optimState.funccount + 1;

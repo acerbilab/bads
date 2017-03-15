@@ -121,16 +121,38 @@ if ~isempty(options.FunValues)
             'The ''FunValues'' field in OPTIONS needs to have a X and a Y field (respectively, inputs and their function values).');
     end
     
+    
     X = options.FunValues.X;
-    Y = options.FunValues.Y;    
+    Y = options.FunValues.Y;
     if size(X,1) ~= size(Y,1)
         error('X and Y arrays in the OPTIONS.FunValues need to have the same number of rows (each row is a tested point).');        
-    end
-    
+    end    
+    if ~all(isfinite(X)) || ~all(isfinite(Y)) || ~isreal(X) || ~isreal(Y)
+        error('X and Y arrays need to be finite and real-valued.');                
+    end    
     if ~isempty(X) && size(X,2) ~= nvars
         error('X should be a matrix of tested points with the same dimensionality as X0 (one input point per row).');
+    end
+    if ~isempty(Y) && size(Y,2) ~= 1
+        error('Y should be a vertical array of function values (one function value per row).');
     end
     
     optimState.X = X;
     optimState.Y = Y;    
+    
+    % Heteroskedastic noise
+    if isfield(options.FunValues,'S')
+        S = options.FunValues.S;
+        if size(S,1) ~= size(Y,1)
+            error('X, Y, and S arrays in the OPTIONS.FunValues need to have the same number of rows (each row is a tested point).');        
+        end    
+        if ~all(isfinite(S)) || ~isreal(S) || ~all(S > 0)
+            error('S array needs to be finite, real-valued, and positive.');
+        end
+        if ~isempty(S) && size(S,2) ~= 1
+            error('S should be a vertical array of estimated function SD values (one SD per row).');
+        end
+        optimState.S = S;        
+    end    
+    
 end
