@@ -55,6 +55,7 @@ function [x,fval,exitflag,output,funValues,gpstruct] = bads(fun,x0,LB,UB,PLB,PUB
 % gpTrainingSet:         - uCheck set to projection = 1 line 334
 %
 % TO DO:
+% - check options.FunValues provided as argument
 % - fix restarts e multibayes
 % - compute func running time and do more stuff if func is slow
 % - understand if the warping is working correctly, test moar
@@ -66,8 +67,8 @@ function [x,fval,exitflag,output,funValues,gpstruct] = bads(fun,x0,LB,UB,PLB,PUB
 
 %% Default options
 
-defopts.Display                 = 'all                  % Level of display ("all", "iter" or "off")';
-defopts.Plot                    = 'off                  % Show optimization plots ("profile" or "scatter" or "off")';
+defopts.Display                 = 'iter                 % Level of display ("iter", "notify", "final", or "off")';
+defopts.Plot                    = 'off                  % Show optimization plots ("profile", "scatter", or "off")';
 defopts.Debug                   = 'off                  % Debug mode, plot additional info';
 
 % Termination conditions
@@ -176,18 +177,57 @@ defopts.HedgeDecay              = '0.1^(1/(2*nvars))';
 
 defopts.TrueMinX                = '[]                   % Location of the global minimum (for visualization only)';
 
-if nargin < 1 || strcmpi(fun, 'defaults') % pass default options
+%% If called with no arguments or with 'defaults', return default options
+if nargin < 1 || strcmpi(fun, 'defaults')
     if nargin < 1
         fprintf('Default options returned (type "help bads" for help).\n');
     end
     x = defopts;
     return;
 end
-    
-%% Initialize variables and algorithm structures
 
-if ischar(fun); fun = str2func(fun); end
-optimState.fun = fun;               % Store objective function as string
+
+%% Check that all required subfolders are on the MATLAB path
+
+subfolders = {'acq','gpdef','gpml_fast','init','poll','search','utils','warp'};
+pathCell = regexp(path, pathsep, 'split');
+baseFolder = fileparts(mfilename('fullpath'));
+
+onPath = true;
+for iFolder = 1:numel(subfolders)
+    folder = [baseFolder,filesep,subfolders{iFolder}];    
+    if ispc  % Windows is not case-sensitive
+      onPath = onPath & any(strcmpi(folder, pathCell));
+    else
+      onPath = onPath & any(strcmp(folder, pathCell));
+    end
+end
+
+% ADDPATH is slow, call it only if folders are not on path
+if ~onPath
+    addpath(genpath(fileparts(mfilename('fullpath'))));
+end
+
+%% Initialize display printing options
+
+if ~isfield(options,'Display') || isempty(options.Display)
+    options.Display = defopts.Display;
+end
+
+switch lower(options.Display)
+    case {'notify','notify-detailed'}
+        prnt = 1;
+    case {'none','off'}
+        prnt = 0;
+    case {'all','iter','iter-detailed'}
+        prnt = 3;
+    case {'final','final-detailed'}
+        prnt = 2;
+    otherwise
+        prnt = 1;
+end
+
+%% Initialize variables and algorithm structures
 
 if nargin < 3 || isempty(LB); LB = -Inf; end
 if nargin < 4 || isempty(UB); UB = Inf; end
@@ -196,31 +236,33 @@ if nargin < 6; PUB = []; end
 if nargin < 7; options = []; end
 
 if isempty(x0)
-    if strncmpi(options.Display,'all',3)
+    if prnt > 2
         fprintf('X0 not specified. Taking the number of dimensions from PLB and PUB...');
     end
-    if numel(PLB) ~= numel(PUB)
-        error('PLB and PUB need to have the same number of elements.');
-    end
-    if strncmpi(options.Display,'all',3)
-        fprintf(' NVARS = %d.\n', numel(PLB));
-    end
+    if isempty(PLB) || isempty(PUB)
+        error('If no starting point is provided, PLB and PUB need to be specified.');
+    end    
     x0 = NaN(size(PLB));
-    SkipInitPoint = 1;
+    if prnt > 2
+        fprintf(' NVARS = %d.\n', numel(x0));
+    end
+    SkipInitPoint = 1;  % No starting point provided
 else
-    SkipInitPoint = 0;
+    SkipInitPoint = 0;  % Starting point provided
 end
 
 nvars = numel(x0);
+optimState = [];
 
 % Initialize algorithm options
 options = initoptions(nvars,defopts,options);    
 
-% Initalize variables
+% Initalize and transform variables
 [u0,LB,UB,PLB,PUB,MeshSizeInteger,MeshSize,TolMesh,optimState] = ...
     initvars(x0,LB,UB,PLB,PUB,optimState,options);
 options.TolMesh = TolMesh;
     
+optimState = updateSearchBounds(optimState);
 optimState.searchfactor = 1;
 optimState.sdlevel = options.IncumbentSigmaMultiplier;
 optimState.searchcount = options.SearchNtry;    % Skip search at first iteration
@@ -231,25 +273,13 @@ es_mu = options.Nsearch/es_iter;
 es_lambda = es_mu;
 optimState.es = ESupdate(es_mu,es_lambda,es_iter);
 
+% Store objective function
+if ischar(fun); fun = str2func(fun); end
+optimState.fun = fun;
 if isempty(varargin)
-    funwrapper = fun;
+    funwrapper = fun;   % No additional function arguments passed
 else
     funwrapper = @(u_) fun(u_,varargin{:});
-end
-
-% Read prior function evaluations
-if ~isempty(options.FunValues)
-    try
-        warning('XXXXXXXXXXXXXXXXXXXXX');
-        optimState.X = options.FunValues.X;
-        optimState.Y = options.FunValues.Y;
-        assert(size(optimState.X,1) == size(optimState.Y,1), ...
-            'bads:funValues', ...
-            'X and Y arrays in the ''FunValues'' field in OPTIONS need to have the same number of rows (each row is a tested point).');        
-    catch
-        error('bads:funValues', ...
-            'The ''FunValues'' field in OPTIONS needs to have a X and a Y field (respectively, inputs and their function values).');
-    end
 end
 
 % Initialize function logger
@@ -302,7 +332,7 @@ optimState.u = u;
 % Initialize GP
 if options.FitLik; gplik = []; else gplik = log(options.TolFun); end
 gpstruct = feval(options.gpdefFcn{:},nvars,gplik,optimState,options,[],options.gpMarginalize);
-gpstruct.fun = fun;
+gpstruct.fun = funwrapper;
 fhyp = gpstruct.hyp;
 if options.RotateGP && isfield(optimState,'C'); gpstruct.C = inv(optimState.C); end
 
@@ -341,13 +371,8 @@ while ~isFinished
     optimState.meshsize = MeshSize;
     optimState.searchmeshsize = options.PollMeshMultiplier.^optimState.SearchSizeInteger;
     
-    % Bounds for search mesh
-    optimState.LBsearch = force2grid(LB,optimState);
-    optimState.LBsearch(optimState.LBsearch < optimState.LB) = ...
-        optimState.LBsearch(optimState.LBsearch < optimState.LB) + optimState.searchmeshsize;
-    optimState.UBsearch = force2grid(UB,optimState);
-    optimState.UBsearch(optimState.UBsearch > optimState.UB) = ...
-        optimState.UBsearch(optimState.UBsearch > optimState.UB) - optimState.searchmeshsize;    
+    % Update bounds for search mesh
+    optimState = updateSearchBounds(optimState);
     
     % Minimum improvement for a poll/search to be considered successful
     SufficientImprovement = options.TolImprovement*(MeshSize^options.ForcingExponent);
@@ -816,7 +841,7 @@ while ~isFinished
             if strcmpi(options.Plot,'profile') && ~isempty(gpstruct.x)
                 % figure(iter);
                 hold off;                
-                landscapeplot(@(u_) fun(origunits(u_,optimState)), ...
+                landscapeplot(@(u_) funwrapper(origunits(u_,optimState)), ...
                     u, ...
                     LB, ...
                     UB, ...
@@ -1332,6 +1357,18 @@ for index = 1:iter
     optimState.iterList.fsd(index) = fsd;
 end
 
+end
+
+%--------------------------------------------------------------------------
+function optimState = updateSearchBounds(optimState)
+%UPDATESEARCHBOUNDS Update bounds for search on the mesh.
+
+optimState.LBsearch = force2grid(optimState.LB,optimState);
+optimState.LBsearch(optimState.LBsearch < optimState.LB) = ...
+    optimState.LBsearch(optimState.LBsearch < optimState.LB) + optimState.searchmeshsize;
+optimState.UBsearch = force2grid(optimState.UB,optimState);
+optimState.UBsearch(optimState.UBsearch > optimState.UB) = ...
+    optimState.UBsearch(optimState.UBsearch > optimState.UB) - optimState.searchmeshsize;
 end
 
 %--------------------------------------------------------------------------

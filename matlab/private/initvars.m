@@ -1,8 +1,9 @@
 function [u0,LB,UB,PLB,PUB,MeshSizeInteger,MeshSize,TolMesh,optimState] = initvars(x0,LB,UB,PLB,PUB,optimState,options)
-%INITVARS Initialize variables and transform coordinates
+%INITVARS Initialize variables and transform coordinates.
 
 nvars = numel(x0);
 
+% Expand scalar inputs to full vectors
 if isscalar(LB); LB = LB*ones(1,nvars); end
 if isscalar(UB); UB = UB*ones(1,nvars); end
 if isscalar(PLB); PLB = PLB*ones(1,nvars); end
@@ -14,9 +15,32 @@ if isempty(PLB) || isempty(PUB)
     if isempty(PUB); PUB = UB; end
 end
 
-assert(all(isfinite(([PLB(:); PUB(:)]))), ...
-    'Plausible interval bounds PLB and PUB need to be finite.');
-    
+% Test that all vectors have the same length
+if any([numel(LB),numel(UB),numel(PLB),numel(PUB)] ~= nvars)
+    error('All input vectors need to have the same size.');
+end
+
+% Test that all vectors are row vectors
+if ~isvector(x0) || ~isvector(LB) || ~isvector(UB) || ~isvector(PLB) || ~isvector(PUB) ...
+        || size(x0,1) ~= 1 || size(LB,1) ~= 1 || size(UB,1) ~= 1 || size(PLB,1) ~= 1 || size(PUB,1) ~= 1
+    error('All input vectors should be row vectors.');
+end
+
+% Test that plausible bounds are finite
+if ~all(isfinite(([PLB, PUB]))) 
+    error('Plausible interval bounds PLB and PUB need to be finite.');
+end
+
+% Test that all vectors are real-valued
+if ~isreal([x0; LB; UB; PLB; PUB])
+    error('All input vectors should be real-valued.');
+end
+
+% Test bound order
+if ~all(LB <= PLB & PLB < PUB & PUB <= UB)
+    error('Bound vectors do not respect the order: LB <= PLB < PUB <= UB.');
+end
+
 % Grid parameters
 MeshSizeInteger = 0;        % Mesh size in log base units
 optimState.SearchSizeInteger = min(0,MeshSizeInteger*options.SearchGridMultiplier - options.SearchGridNumber);
@@ -56,8 +80,9 @@ optimState.UBsearch = force2grid(UB,optimState);
 optimState.UBsearch(optimState.UBsearch > optimState.UB) = ...
     optimState.UBsearch(optimState.UBsearch > optimState.UB) - optimState.searchmeshsize;
 
-u0 = force2grid(gridunits(x0(:)',optimState),optimState);
-optimState.x0 = x0;             % Record starting point
+% Starting point in grid coordinates
+u0 = force2grid(gridunits(x0,optimState),optimState);
+optimState.x0 = x0;         % Record starting point (original coordinates)
 optimState.u = u0;
 
 % Put TOLMESH on space
@@ -74,7 +99,7 @@ if ~isempty(options.PeriodicVars)
     end
 end
 
-% Setup covariance information
+% Setup covariance information (unused)
 if options.HessianUpdate
     if strcmpi(options.HessianMethod,'cmaes')
         D = ((PUB-PLB)./optimState.scale).^2/12;
@@ -89,4 +114,23 @@ if options.HessianUpdate
     optimState.B = inv(optimState.Binv);
 end
 
+% Import prior function evaluations
+if ~isempty(options.FunValues)
+    if ~isfield(options.FunValues,'X') || ~isfield(options.FunValues,'Y')
+        error('bads:funValues', ...
+            'The ''FunValues'' field in OPTIONS needs to have a X and a Y field (respectively, inputs and their function values).');
+    end
+    
+    X = options.FunValues.X;
+    Y = options.FunValues.Y;    
+    if size(X,1) ~= size(Y,1)
+        error('X and Y arrays in the OPTIONS.FunValues need to have the same number of rows (each row is a tested point).');        
+    end
+    
+    if ~isempty(X) && size(X,2) ~= nvars
+        error('X should be a matrix of tested points with the same dimensionality as X0 (one input point per row).');
+    end
+    
+    optimState.X = X;
+    optimState.Y = Y;    
 end

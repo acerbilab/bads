@@ -1,5 +1,5 @@
 function options = initoptions(nvars,defopts,options)
-%INITOPTIONS Initialize OPTIONS struct
+%INITOPTIONS Initialize OPTIONS struct.
 
 % Assign default values to OPTIONS struct
 for f = fieldnames(defopts)'
@@ -8,7 +8,7 @@ for f = fieldnames(defopts)'
     end
 end
 
-% Remove comments and trailing empty spaces from fields
+% Remove comments and trailing empty spaces from options fields
 for f = fieldnames(options)'
     if ischar(options.(f{:}))
         idx = find(options.(f{:}) == '%',1);
@@ -18,6 +18,7 @@ for f = fieldnames(options)'
     end
 end
 
+% OPTIONS fields that need to be evaluated
 evalfields = {'Debug', 'MaxIter', 'MaxFunEvals', 'TolMesh', 'TolStallIters', ...
     'TolFun', 'Ninit', 'InitFcn', 'Restarts', 'CacheSize', 'FunValues', 'PeriodicVars' ...
     'TolImprovement', 'ForcingExponent', 'PollMeshMultiplier', 'IncumbentSigmaMultiplier', 'AlternativeIncumbent', 'AdaptiveIncumbentShift', 'FitnessShaping', 'WarpFunc', ...
@@ -69,7 +70,8 @@ end
 
 % Check if MATLAB's Optimization Toolbox™ is available
 if isempty(options.OptimToolbox)
-    if exist('fmincon.m','file') && exist('fminunc.m','file') && exist('optimoptions.m','file')
+    if exist('fmincon.m','file') && exist('fminunc.m','file') && exist('optimoptions.m','file') ...
+            && license('test', 'optimization_toolbox')
         options.OptimToolbox = 1;
     else
         options.OptimToolbox = 0;

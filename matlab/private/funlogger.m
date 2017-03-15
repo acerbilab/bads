@@ -1,9 +1,28 @@
 function [fval,optimState] = funlogger(fun,u,optimState,state,varargin)
-%FUNLOGGER Call objective function and do some bookkeeping
+%FUNLOGGER Call objective function and do some bookkeeping.
+%   [~,OPTIMSTATE] = FUNLOGGER(FUN,U,OPTIMSTATE,'init') starts logging
+%   function FUN with starting point U and optimization struct OPTIMSTATE.
+%
+%   [~,OPTIMSTATE] = FUNLOGGER(FUN,U,OPTIMSTATE,'init',NMAX) stores up to
+%   NMAX function values (default NMAX=1e4).
+%
+%   [~,OPTIMSTATE] = FUNLOGGER(FUN,U,OPTIMSTATE,'init',NMAX,1) also stores
+%   heteroskedastic noise (second output argument) from the logged function.
+%
+%   [FVAL,OPTIMSTATE] = FUNLOGGER(FUN,U,OPTIMSTATE,'iter') evaluates function
+%   FUN at U with optimization struct OPTIMSTATE, return function value FVAL.
+%   FUN must take a vector input and returns a scalar value and, optionally,
+%   the (estimated) SD of the returned value (if heteroskedastic noise
+%   handling is on).
+%
+%   [~,OPTIMSTATE] = FUNLOGGER(FUN,U,OPTIMSTATE,'done') finalizes stored
+%   function values.
+
+%   Luigi Acerbi 2017
 
 fval = [];
 switch lower(state)
-    case 'init'
+    case 'init' % Start new function logging session
     
         nvars = numel(u);
 
@@ -28,13 +47,14 @@ switch lower(state)
 
         else % Receiving previous evaluations (e.g. from previous run)
             
-            % Current cache is smaller than previous one, keep most recent
-            % evaluated points
+            % Find last evaluated point
             optimState.Xmax = find(~isnan(optimState.Y),1,'last');
             if ~isfield(optimState,'Xn') || isempty(optimState.Xn)
                 optimState.Xn = optimState.Xmax;
             end
             
+            % Current cache is smaller than previous one, keep most recent
+            % evaluated points
             if optimState.Xmax > nmax
                 optimState.X = circshift(optimState.X,-optimState.Xn);
                 optimState.X = optimState.X(end-nmax+1:end,:);
@@ -53,12 +73,12 @@ switch lower(state)
                 if hescnoise
                     optimState.S = [optimState.S; NaN(offset,1)];
                 end                
-            end            
+            end
             optimState.U = gridunits(optimState.X,optimState);
         end
         optimState.funevaltime = NaN(nmax,1);
     
-    case 'iter'
+    case 'iter' % Evaluate function and store output
 
         x = origunits(u,optimState);    % Convert back to original space
         % Heteroscedastic noise?
@@ -72,8 +92,8 @@ switch lower(state)
         end
         t = toc;
 
+        % Update function records
         optimState.funccount = optimState.funccount + 1;
-
         optimState.Xn = max(1,mod(optimState.Xn+1, size(optimState.X,1)));
         optimState.Xmax = min(optimState.Xmax+1, size(optimState.X,1));
         optimState.X(optimState.Xn,:) = x;
@@ -83,11 +103,8 @@ switch lower(state)
             optimState.S(optimState.Xn) = fsd;            
         end
         optimState.funevaltime(optimState.Xn) = t;
-
-        varargout{1} = fval;
-        if nargout > 1; varargout{2} = optimState; end
         
-    case 'done'
+    case 'done' % Finalize stored table
         
         if isfield(optimState,'S'); hescnoise = 1; else hescnoise = 0; end
         
@@ -102,7 +119,10 @@ switch lower(state)
             if hescnoise; optimState.S = circshift(optimState.S,-optimState.Xn); end
             optimState.funevaltime = circshift(optimState.funevaltime,-optimState.Xn);        
         end
-        optimState = rmfield(optimState,'U');        
+        optimState = rmfield(optimState,'U');
+        
+    otherwise        
+        error('Unknown FUNLOGGER action.');
 end
 
 end
