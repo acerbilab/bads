@@ -214,14 +214,14 @@ if ~isfield(options,'Display') || isempty(options.Display)
     options.Display = defopts.Display;
 end
 
-switch lower(options.Display)
-    case {'notify','notify-detailed'}
+switch lower(options.Display(1:3))
+    case {'not','notify','notify-detailed'}
         prnt = 1;
-    case {'none','off'}
+    case {'non','none','off'}
         prnt = 0;
-    case {'all','iter','iter-detailed'}
+    case {'ite','all','iter','iter-detailed'}
         prnt = 3;
-    case {'final','final-detailed'}
+    case {'fin','final','final-detailed'}
         prnt = 2;
     otherwise
         prnt = 1;
@@ -290,32 +290,21 @@ end
 iter = 0;
 optimState.iter = iter;
 
-assert(round(options.MaxFunEvals) == options.MaxFunEvals && options.MaxFunEvals > 0, ...
-    'OPTIONS.MaxFunEvals needs to be a positive integer.');
-if ~SkipInitPoint
-    [fval,optimState] = funlogger(funwrapper,u0,optimState,'iter');
-else
-    fval = Inf;
-end
-optimState.fval = fval;
-
-if any(strcmpi(options.Display,{'all','iter'}))
+if prnt > 2
     if options.UncertaintyHandling
         displayFormat = ' %5.0f       %5.0f    %12.6g    %12.6g    %12.6g    %20s    %s\n';
         fprintf(' Iteration    f-count      E[f(x)]        SD[f(x)]      MeshScale          Method          Actions\n');
-        if ~SkipInitPoint; fprintf(displayFormat, 0, optimState.funccount, fval, NaN, MeshSize, '', ''); end
     else
         displayFormat = ' %5.0f       %5.0f    %12.6g    %12.6g    %20s    %s\n';
         fprintf(' Iteration    f-count          f(x)          MeshScale          Method          Actions\n');
-        if ~SkipInitPoint; fprintf(displayFormat, 0, optimState.funccount, fval, MeshSize, '', ''); end
     end
 else
     displayFormat = [];
 end
 
-% Evaluate points on initial mesh
+% Evaluate starting point and initial mesh
 [u,fval,isFinished,optimState] = ...
-    initmesh(u0,fval,funwrapper,SkipInitPoint,displayFormat,optimState,options);
+    initmesh(u0,funwrapper,SkipInitPoint,optimState,options,prnt,displayFormat);
     
 if options.UncertaintyHandling  % Current uncertainty in estimate
     fsd = options.NoiseSize(1);
@@ -329,7 +318,7 @@ optimState.usuccess = ubest;    % Store sequence of successful x and y values
 optimState.fsuccess = fval;
 optimState.u = u;
 
-% Initialize GP
+% Initialize Gaussian Process (GP) structure
 if options.FitLik; gplik = []; else gplik = log(options.TolFun); end
 gpstruct = feval(options.gpdefFcn{:},nvars,gplik,optimState,options,[],options.gpMarginalize);
 gpstruct.fun = funwrapper;
@@ -338,7 +327,7 @@ if options.RotateGP && isfield(optimState,'C'); gpstruct.C = inv(optimState.C); 
 
 fvalhistory = Inf(min(1000,options.MaxIter),1);
 
-% Initialize struct with gp prediction statistics
+% Initialize struct with GP prediction statistics
 optimState.gpstats = savegpstats([],[],[],[],ones(1,max(1,options.gpSamples)));
 
 % List of points at the end of each iteration
@@ -347,8 +336,8 @@ optimState.iterList.fval = [];
 optimState.iterList.fsd = [];
 optimState.iterList.fhyp = [];
 
-optimState.lastfitgp = -Inf;      % Last fcn evaluation for which the gp was trained
-lastskipped = 0;    % Last skipped iteration
+optimState.lastfitgp = -Inf;    % Last fcn evaluation for which the gp was trained
+lastskipped = 0;                % Last skipped iteration
 pollCount = 0;
 optimState.hedge = [];
 

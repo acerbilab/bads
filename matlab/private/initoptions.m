@@ -79,4 +79,7 @@ if isempty(options.OptimToolbox)
     end    
 end
 
+% Check options
+if round(options.MaxFunEvals) ~= options.MaxFunEvals || options.MaxFunEvals <= 0
+    error('OPTIONS.MaxFunEvals needs to be a positive integer.');
 end

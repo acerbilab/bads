@@ -9,7 +9,7 @@ TolFun = options.TolFun;
 TolMesh = options.TolMesh;
 
 if gpmlext
-    gaussPriorFunc = @gaussian_prior; 
+    gaussPriorFunc = @gaussian_prior;
 else
     gaussPriorFunc = @priorGauss;
 end
