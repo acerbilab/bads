@@ -2,6 +2,7 @@
 % gp.m from GPML, but Hessian friendly
 
 % Copyright (c) 2014--2015 Roman Garnett.
+% Modified 2016 Luigi Acerbi.
 
 % function gpstruct = gpset(gpstruct, hyp, inf, mean, cov, lik, prior, bounds, x, y)
 function gpstruct = gpset(gpstruct, varargin)

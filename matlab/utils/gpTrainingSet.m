@@ -596,7 +596,7 @@ if rotate_gp && ~strcmpi(method,'add') && ~strcmpi(method,'neighborhood')  % Rot
     end
     gpstruct.x = gpstruct.x*gpstruct.C';
 end
-gpstruct = feval(options.gpdefFcn{:},D,gplik,optimState,options,gpstruct,options.gpMarginalize);
+gpstruct = feval(options.gpdefFcn{:},D,gplik,optimState,options,gpstruct);
 
 % Re-fit Gaussian process (optimize or sample)
 if retrain

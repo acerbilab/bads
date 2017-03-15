@@ -91,7 +91,8 @@ defopts.PeriodicVars            = '[]                   % Array with indices of 
 
 defopts.TolImprovement          = '1                    % Minimum significant improvement at unit mesh size';
 defopts.ForcingExponent         = '3/2                  % Exponent of forcing function';
-defopts.PollMeshMultiplier      = '2                    % Mesh multiplicative factor between iterations';
+%defopts.PollMeshMultiplier      = '2                    % Mesh multiplicative factor between iterations';
+defopts.PollMeshMultiplier      = '4                    % Mesh multiplicative factor between iterations';
 defopts.IncumbentSigmaMultiplier = '0.1                 % Multiplier to incumbent uncertainty for acquisition functions';
 defopts.AlternativeIncumbent    = 'off                  % Use alternative incumbent offset';
 defopts.AdaptiveIncumbentShift  = 'off                  % Adaptive multiplier to incumbent uncertainty';
@@ -113,7 +114,8 @@ defopts.SearchScaleFailure      = 'sqrt(0.5)            % Search radius contract
 defopts.SearchFactorMin         = '0.5';
 % defopts.SearchMethod            = '{@searchWCMscale,1}  % Search function(s)';
 defopts.SearchMethod            = '{@searchHedge,{{@searchES,1,1},{@searchES,2,1}}}  % Search function(s)';
-defopts.SearchGridNumber        = '10                   % iteration scale factor between poll and search';
+defopts.SearchGridNumber        = '5                    % iteration scale factor between poll and search';
+%defopts.SearchGridNumber        = '10                   % iteration scale factor between poll and search';
 defopts.MaxPollGridNumber       = '0                    % Maximum poll integer';
 defopts.SearchGridMultiplier    = '2                    % multiplier integer scale factor between poll and search';
 defopts.SearchSizeLocked        = 'on                   % Relative search scale factor locked to poll scale factor';
@@ -125,18 +127,15 @@ defopts.SearchOptimize          = 'no                   % Further optimize acqui
 
 % Gaussian Process properties
 defopts.Ndata                   = '50 + 10*nvars       % Number of training data (doubled under uncertainty)';
-% defopts.Ndata                   = 'min(max(50,10*nvars),200)    % Number of training data (doubled under uncertainty)';
 defopts.MinNdata                = '50                   % Minimum number of training data (doubled under uncertainty)';
 defopts.BufferNdata             = '100                  % Max number of training data removed if too far from current point';
 defopts.gpSamples               = '0                    % Hyperparameters samples (0 = optimize)';
-defopts.gpMarginalize           = 'off                  % Approximate marginalization of hyper-parameters';
 defopts.MinRefitTime            = '2*nvars              % Minimum fcn evals before refitting the gp';
 defopts.PollTraining            = 'yes                  % Train gp also during poll step';
 defopts.DoubleRefit             = 'off                  % Try a second fit';
 defopts.gpMeanPercentile        = '90                   % Percentile of empirical GP mean';
 defopts.gpMeanRangeFun          = '@(ym,y) (ym - prctile(y,50))/5*2   % Empirical range of hyperprior over the mean';
-defopts.gpdefFcn                = '{@gpdefStationaryNew,''rq'',[1,1]}  % GP definition fcn';
-%defopts.gpdefFcn                = '{@gpdefStationaryNew,''matern5'',1}     % GP definition fcn';
+defopts.gpdefFcn                = '{@gpdefBads,''rq'',[1,1]}  % GP definition fcn';
 defopts.gpMethod                = 'grid                 % GP fit method';
 defopts.gpCluster               = 'no                   % Cluster additional points during training';
 defopts.RotateGP                = 'no                   % Rotate GP basis';
@@ -176,6 +175,7 @@ defopts.HedgeBeta               = '1e-3/options.TolFun';
 defopts.HedgeDecay              = '0.1^(1/(2*nvars))';
 
 defopts.TrueMinX                = '[]                   % Location of the global minimum (for visualization only)';
+
 
 %% If called with no arguments or with 'defaults', return default options
 if nargin < 1 || strcmpi(fun, 'defaults')
@@ -320,7 +320,7 @@ optimState.u = u;
 
 % Initialize Gaussian Process (GP) structure
 if options.FitLik; gplik = []; else gplik = log(options.TolFun); end
-gpstruct = feval(options.gpdefFcn{:},nvars,gplik,optimState,options,[],options.gpMarginalize);
+gpstruct = feval(options.gpdefFcn{:},nvars,gplik,optimState,options,[]);
 gpstruct.fun = funwrapper;
 fhyp = gpstruct.hyp;
 if options.RotateGP && isfield(optimState,'C'); gpstruct.C = inv(optimState.C); end
