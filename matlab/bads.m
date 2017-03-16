@@ -58,6 +58,8 @@ function [x,fval,exitflag,output,funValues,gpstruct] = bads(fun,x0,LB,UB,PLB,PUB
 % - check options.FunValues provided as argument
 % - check fvalhistory
 % - play around with OPTIONS.ImprovementQuantile
+% - added retrain at first search step (is it necessary?)
+% - removed added point at the end of poll stage (was it necessary?)
 % - fix restarts e multibayes
 % - compute func running time and do more stuff if func is slow
 % - understand if the warping is working correctly, test moar
@@ -369,7 +371,7 @@ while ~isFinished
         
         % Check whether it is time to refit the GP
         [refitgp_flag,~,optimState] = IsRefitTime(optimState,options);
-        if refitgp_flag; gpstruct.post = []; end
+        if refitgp_flag || optimState.searchcount == 0; gpstruct.post = []; end
         
         if isempty(gpstruct.post)
             % Local GP approximation on current point
@@ -766,9 +768,10 @@ while ~isFinished
                 fpollsd = 0;                
             end
             
-            % Check if current point improves over best polled point so far
+            % Compute estimated improvement over incumbent
             PollImprovement = EvalImprovement(fval,fpoll,fsd,fpollsd,options.ImprovementQuantile);
             
+            % Check if current point improves over best polled point so far
             if PollImprovement > PollBestImprovement 
                 upollbest = unew;
                 fpollbest = fpoll;
@@ -780,10 +783,8 @@ while ~isFinished
                 end
             end
 
+            % Increase poll counter
             optimState.pollcount = optimState.pollcount + 1;
-
-            
-            if optimState.pollcount > nvars*2; break; end
         end % Poll loop
         
         % Evaluate poll
@@ -795,13 +796,13 @@ while ~isFinished
         end
 
         if PollBestImprovement > SufficientImprovement
-            % Successful poll
+            % Successful poll, increase mesh size
             MeshSizeInteger = min(MeshSizeInteger + 1, options.MaxPollGridNumber);
-            SuccessPoll = 1;
+            SuccessPoll_flag = true;
             optimState.usuccess = [optimState.usuccess; ubest];
             optimState.fsuccess = [optimState.fsuccess; fval];
         else
-            % Failed poll
+            % Failed poll, decrease mesh size
             if options.AccelerateMesh && iter > options.AccelerateMeshSteps && ...
                 fvalhistory(iter-options.AccelerateMeshSteps) - fval < options.TolFun
                 MeshSizeInteger = MeshSizeInteger - 2;
@@ -810,7 +811,7 @@ while ~isFinished
             end            
             
             optimState.SearchSizeInteger = min(optimState.SearchSizeInteger, MeshSizeInteger*options.SearchGridMultiplier - options.SearchGridNumber);
-            SuccessPoll = 0;
+            SuccessPoll_flag = false;
             
             % Profile plot of iteration
             if strcmpi(options.Plot,'profile') && ~isempty(gpstruct.x)
@@ -846,8 +847,8 @@ while ~isFinished
         optimState.meshsize = MeshSize;
 
         % Print iteration
-        if any(strcmpi(options.Display,{'iter','all'}))
-            if SuccessPoll; string = 'Successful poll'; else string = 'Refine grid'; end
+        if prnt > 2
+            if SuccessPoll_flag; string = 'Successful poll'; else string = 'Refine grid'; end
             action = [];
             if refitted_flag; if isempty(action); action = 'Train'; else action = [action ', train']; end; end            
             if lastskipped == iter; if isempty(action); action = 'Skip'; else action = [action ', skip']; end; end
@@ -857,18 +858,7 @@ while ~isFinished
                 fprintf(displayFormat,iter,optimState.funccount,fval,MeshSize,string,action);
             end
         end
-        
-        % Add polled point to training set
-        if ~isempty(unew) && ~options.UncertaintyHandling
-            gpstruct = gpTrainingSet(gpstruct, ...
-                'add', ...
-                unew, ...
-                fpoll, ...
-                optimState, ...
-                options, ...
-                0);
-        end        
-        
+                
         %H = fhess(@(xi_) gppred(xi_,gpstruct), gridunits(x,optimState), [], 'step', optimState.searchmeshsize)
         %H2 = fhess(@(x_) funwrapper(x_), x, [], 'step', optimState.searchmeshsize);        
         %[H; H2]
