@@ -1,16 +1,16 @@
-function [z,dz,ymu,ys,fmu,fs,fpi] = acqNegEI(xi,target,gpstruct,optimState,grad)
+function [z,dz,ymu,ys,fmu,fs,fpi] = acqNegEI(xi,target,gpstruct,optimState,grad_flag)
 %ACQNEGEI Acquisition function for (negative) expected improvement.
 
-if nargin < 5 || isempty(grad); grad = 0; end
+if nargin < 5 || isempty(grad_flag); grad_flag = false; end
 
 n = size(xi,1);
 
-if grad == 1 && n > 1
+if grad_flag && n > 1
     error('acqNegEI:gradient', ...
         'Gradient of acquisition function is provided only at one test point XI (row vector).');
 end
 
-if grad
+if grad_flag
     [ymu,ys2,fmu,fs2,hypw,dymu,dys2,dfmu,dfs2] = gppred(xi,gpstruct,'central');
 else
     [ymu,ys2,fmu,fs2,hypw] = gppred(xi,gpstruct);
@@ -25,9 +25,6 @@ fpi = 0.5*erfc(-gammaz/sqrt(2));
 % Expected improvement
 z = -fs.*(gammaz.*fpi + exp(-0.5*(gammaz.^2))/sqrt(2*pi));
 
-% Expected squared improvement
-% z = -fs.^2.*((gammaz.^2+1).*fpi + gammaz.*exp(-0.5*(gammaz.^2))/sqrt(2*pi));
-
 try
     z = sum(bsxfun(@times,hypw(~isnan(hypw)),z(~isnan(hypw),:)),1);
 catch
@@ -36,7 +33,7 @@ catch
     return;
 end
 
-if grad    
+if grad_flag    
     % Gradient of probability of improvement
     dfs = 0.5*dfs2./fs;
     dgammaz = -(dfmu.*fs + (target - fmu).*dfs)./fs2;

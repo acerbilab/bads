@@ -1,7 +1,7 @@
-function [z,dz,ymu,ys,fmu,fs,fpi] = acqLCB(sqrtbetat,xi,target,gpstruct,optimState,grad)
+function [z,dz,ymu,ys,fmu,fs,fpi] = acqLCB(sqrtbetat,xi,target,gpstruct,optimState,grad_flag)
 %ACQLCB Acquisition function for lowest confidence bound (LCB).
 
-if nargin < 6 || isempty(grad); grad = 0; end
+if nargin < 6 || isempty(grad_flag); grad_flag = false; end
 
 n = size(xi,1);
 nvars = size(xi,2);
@@ -20,7 +20,7 @@ elseif ~isnumeric(sqrtbetat) || numel(sqrtbetat) > 1
         'The SQRTBETAT parameter of the acquisition function needs to be a scalar or a function handle/name to an annealing schedule.');
 end
 
-if grad
+if grad_flag
     [ymu,ys2,fmu,fs2,hypw,dymu,dys2,dfmu,dfs2] = gppred(xi,gpstruct,'central');
 else
     [ymu,ys2,fmu,fs2,hypw] = gppred(xi,gpstruct);
@@ -39,7 +39,7 @@ catch
     return;
 end
     
-if grad
+if grad_flag
     dz = dfmu - 0.5*sqrtbetat.*dfs2./fs;
     dz = sum(bsxfun(@times,hypw(~isnan(hypw)),dz(~isnan(hypw),:),1));    
 else

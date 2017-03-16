@@ -1,17 +1,17 @@
-function [z,dz,ymu,ys,fmu,fs,fpi] = acqNegPI(xi,target,gpstruct,optimState,grad)
+function [z,dz,ymu,ys,fmu,fs,fpi] = acqNegPI(xi,target,gpstruct,optimState,grad_flag)
 %ACQNEGPI Acquisition function for (negative) probability of improvement.
 
-if nargin < 5 || isempty(grad); grad = 0; end
+if nargin < 5 || isempty(grad_flag); grad_flag = false; end
 
 n = size(xi,1);
 Nhyp = numel(gpstruct.hyp);
 
-if grad == 1 && n > 1
+if grad_flag && n > 1
     error('acqNegPI:gradient', ...
         'Gradient of acquisition function is provided only at one test point XI (row vector).');
 end
 
-if grad
+if grad_flag
     [ymu,ys2,fmu,fs2,hypw,dymu,dys2,dfmu,dfs2] = gppred(xi,gpstruct,'central');
 else
     [ymu,ys2,fmu,fs2,hypw] = gppred(xi,gpstruct);
@@ -31,7 +31,7 @@ catch
     return;
 end
 
-if grad
+if grad_flag
     % Gradient of probability of improvement
     dfs = 0.5*dfs2./fs;
     dgammaz = -(dfmu.*fs + (gpstruct.ystar - fmu).*dfs)./fs2;

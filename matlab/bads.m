@@ -361,10 +361,10 @@ while ~isFinished
     if optimState.searchcount < options.SearchNtry && size(gpstruct.y,1) > nvars
         
         % Check whether it is time to refit the GP
-        [refitgp_flag,unrelgp_flag,optimState] = IsRefitTime(optimState,options);
+        [refitgp_flag,~,optimState] = IsRefitTime(optimState,options);
         if refitgp_flag; gpstruct.post = []; end
         
-        if isempty(gpstruct.post) % || optimState.funccount > options.Ndata
+        if isempty(gpstruct.post)
             % Local GP approximation on current point
             gpstruct = gpTrainingSet(gpstruct, ...
                 options.gpMethod, ...
@@ -375,8 +375,8 @@ while ~isFinished
                 refitgp_flag);
         end
         
-        % Update GP prediction at incumbent
-        optimState = UpdateIncumbentPrediction(ubest,fhyp,optimState,gpstruct,options);        
+        % Update optimization target (based on GP prediction at incumbent)
+        optimState = UpdateTarget(ubest,fhyp,optimState,gpstruct,options);        
         
         % Generate search set (normalized coordinates)        
         optimState.searchcount = optimState.searchcount + 1;        
@@ -396,16 +396,15 @@ while ~isFinished
                 
         % Remove already evaluated or unfeasible points from search set
         usearchset = uCheck(usearchset,options.TolMesh,optimState,1);
-                                
-        if ~isempty(usearchset)
+        
+        if ~isempty(usearchset) % Non-empty search set
 
-            ns = size(usearchset, 1);            
+            ns = size(usearchset, 1);
             ymu = zeros(numel(gpstruct.hyp),ns);
-            ys = zeros(numel(gpstruct.hyp),ns);            
-
-            % optimState = UpdateIncumbentPrediction(ubest,fhyp,optimState,gpstruct,options);
+            ys = zeros(numel(gpstruct.hyp),ns);
             
-            try                
+            % Evaluate acquisition function on search set
+            try
                 if options.AcqHedge
                     [optimState.hedge,acqIndex,ymu,ys] = ...
                         acqPortfolio('acq',optimState.hedge,usearchset,optimState.ftarget,fstarget,gpstruct,optimState,options,SufficientImprovement);
@@ -426,35 +425,7 @@ while ~isFinished
                         
             % Randomly choose index if something went wrong
             if isempty(index) || ~isfinite(index); index = randi(size(usearchset,1)); end
-            
-            % Do something else if expected improvement is not big enough?
-            if 0 && abs(z(index)) < SufficientImprovement
-                abs(z(index))
-                
-                optimState2 = optimState;
-                options2 = options;
-                optimState2.searchfactor = 10;
-                options2.SearchAcqFcn = {@acqLCB,[]};               
-                usearchset = feval(@searchES,1,1, ...
-                    u, ...
-                    gpstruct, ...
-                    LB, ...
-                    UB, ...
-                    optimState2, ...
-                    options2);
-
-                % Enforce periodicity
-                usearchset = periodCheck(usearchset,LB,UB,optimState);
-
-                % Force candidate points on search grid
-                usearchset = force2grid(usearchset, optimState);
-
-                % Remove already evaluated or unfeasible points from search set
-                usearchset = uCheck(usearchset,options.TolMesh,optimState,1);
-                
-                [~,index] = min(z);
-            end
-            
+                        
             acqu = [];
             
             % Local optimization of the acquisition function 
@@ -523,7 +494,8 @@ while ~isFinished
             
             % Compute distance of search point from current point
             searchdist = sqrt(udist(ubest,usearch,gpstruct.lenscale,optimState));            
-        else
+            
+        else    % Empty search set
             fsearch = fval;
             fsearchsd = 0;
             searchdist = 0;
@@ -686,7 +658,7 @@ while ~isFinished
 
             gpstruct.ystar = fpollbest;     % Best reference value
 
-            optimState = UpdateIncumbentPrediction(upollbest,fpollhyp,optimState,gpstruct,options);
+            optimState = UpdateTarget(upollbest,fpollhyp,optimState,gpstruct,options);
                         
             % Evaluate acquisition function on poll vectors
             if options.AcqHedge
@@ -1193,9 +1165,10 @@ if options.HessianUpdate && ~strcmpi(options.HessianMethod,'cmaes')
 end
 
 end
-            
-%UPDATEINCUMBENTPREDICTION Update gp mean and variance at incumbent
-function optimState = UpdateIncumbentPrediction(ubest,hyp,optimState,gpstruct,options)
+
+%--------------------------------------------------------------------------
+function optimState = UpdateTarget(ubest,hyp,optimState,gpstruct,options)
+%UPDATETARGET Update optimization target (based on GP at incumbent).
 
 if options.UncertaintyHandling || options.UncertainIncumbent
     gptemp = gpstruct;
@@ -1208,6 +1181,7 @@ if options.UncertaintyHandling || options.UncertainIncumbent
         ftargets = optimState.fsd;
     end
     
+    % Set optimization target slightly below current incumbent
     if ~options.AcqHedge
         if options.AlternativeIncumbent
             % [ftargetmu - optimState.sdlevel*ftargets - optimState.fval]            
@@ -1333,85 +1307,6 @@ optimState.LBsearch(optimState.LBsearch < optimState.LB) = ...
 optimState.UBsearch = force2grid(optimState.UB,optimState);
 optimState.UBsearch(optimState.UBsearch > optimState.UB) = ...
     optimState.UBsearch(optimState.UBsearch > optimState.UB) - optimState.searchmeshsize;
-end
-
-%--------------------------------------------------------------------------
-function [hedge, acqIndex, ymu, ys, fmu, fs] = acqPortfolio(method, hedge, u, f, fs, gpstruct, optimState, options, SufficientImprovement, fvalold, MeshSize)
-
-if nargin < 9; fvalold = []; end
-if nargin < 10; MeshSize = []; end
-
-switch lower(method(1:3))
-    case 'acq'
-        
-        [acqIndex,~,ymu,ys,fmu,fs] = ...
-            acqHedge(u,f,fs,gpstruct,optimState,options,SufficientImprovement);
-
-        % Initialize hedge struct
-        if isempty(hedge)
-            [hedge.g,hedge.str] = acqHedge();
-            hedge.n = numel(hedge.g);
-            hedge.count = 0;
-            hedge.gamma = options.HedgeGamma;
-            hedge.beta = options.HedgeBeta;
-            hedge.decay = options.HedgeDecay;
-            hedge.string = {'mpi','mei'};
-        end
-
-        hedge.count = hedge.count + 1;
-        % gammaHedge = min(1/nHedge, sqrt(log(nHedge)/(nHedge*hedge.count)));
-
-        hedge.p = exp(hedge.beta*(hedge.g - max(hedge.g)))./sum(exp(hedge.beta*(hedge.g - max(hedge.g))));
-        hedge.p = hedge.p*(1-hedge.n*hedge.gamma) + hedge.gamma;
-        % hedge.p
-        hedge.chosen = find(rand() < cumsum(hedge.p),1);
-        if hedge.gamma == 0
-            hedge.phat = ones(size(hedge.g));
-        else
-            hedge.phat = Inf(size(hedge.p));
-            hedge.phat(hedge.chosen) = hedge.p(hedge.chosen);
-        end
-        
-    case 'upd'
-
-        for iHedge = 1:hedge.n
-            uHedge = u(min(iHedge,end),:);
-
-            %gpstructnew = gpTrainingSet(gpstructnew, ...
-            %    options.gpMethod, ...
-            %    uHedge, ...
-            %    [], ...
-            %    optimState, ...
-            %    options, ...
-            %    0);
-
-            if iHedge == hedge.chosen
-                fHedge = f; fsHedge = fs;
-            elseif hedge.gamma == 0
-                % Compute estimated function value at point
-                [~,~,fHedge,fs2Hedge] = gppred(uHedge,gpstruct);
-                fsHedge = sqrt(fs2Hedge);                
-            else
-                fHedge = 0; fsHedge = 1;
-            end
-            
-            if fsHedge == 0
-                er = max(0, fvalold - fHedge);
-            elseif isfinite(fHedge) && isfinite(fsHedge) && isreal(fsHedge) && fsHedge > 0
-                % Probability of improvement
-                gammaz = (fvalold - fHedge)./fsHedge;
-                fpi = 0.5*erfc(-gammaz/sqrt(2));            
-
-                % Expected reward
-                er = fsHedge.*(gammaz.*fpi + exp(-0.5*(gammaz.^2))/sqrt(2*pi));
-            else
-                er = 0;
-            end
-
-            hedge.g(iHedge) = hedge.decay*hedge.g(iHedge) + er/hedge.phat(iHedge)/MeshSize;
-        end
-         
-end
 end
 
 %--------------------------------------------------------------------------
