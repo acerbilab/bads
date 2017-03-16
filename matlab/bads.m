@@ -161,6 +161,7 @@ defopts.TolPoI                  = '1e-6/nvars           % Threshold probability 
 defopts.SkipPoll                = 'yes                  % Skip polling if PoI below threshold, even with no success';
 defopts.ConsecutiveSkipping     = 'yes                  % Allow consecutive incomplete polls';
 defopts.SkipPollAfterSearch     = 'yes                  % Skip polling after successful search';
+defopts.CompletePoll            = 'off                  % Complete polling around the current iterate';
 % defopts.MinFailedPollSteps      = 'ceil(sqrt(nvars))    % Number of failed fcn evaluations before skipping is allowed';
 defopts.MinFailedPollSteps      = 'Inf                  % Number of failed fcn evaluations before skipping is allowed';
 defopts.NormAlphaLevel          = '1e-6                 % Alpha level for normality test of gp predictions';
@@ -700,7 +701,7 @@ while ~isFinished
             % less than SufficientImprovement (assumes independence --
             % conservative estimate towards continuing polling)
             gammaz = (optimState.ftarget - SufficientImprovement - fm)./fs;
-            if all(isfinite(gammaz) & isreal(gammaz))
+            if all(isfinite(gammaz)) && isreal(gammaz)
                 fpi = 0.5*erfc(-gammaz/sqrt(2));
                 fpi = sort(fpi,'descend');
                 pless = prod(1-fpi(1:min(nvars,end)));
@@ -708,20 +709,27 @@ while ~isFinished
                 pless = 0;
                 unrelgp_flag = 1;
             end
-
-            % If the probability of improvement at any location is
-            % lower than SufficientImprovement, abort iteration IF
-            % a good candidate was already found OR if the
-            % FASTCONVERGENCE option is on (in this case, a safety flag
-            % prevents from doing it twice in a row)                
-            if ( unrelgp_flag && goodpoll_flag ) || ...
-               ( ~unrelgp_flag && ... 
-            (goodpoll_flag || ((options.ConsecutiveSkipping || lastskipped < iter-1) && optimState.pollcount >= options.MinFailedPollSteps) ) ...
-                    && mean(pless) > 1-options.TolPoI )
-%                if (goodpoll || (options.FastConvergence && lastskipped < iter-1) ) ...
-%                        && pless > 1-options.TolPoI
-                lastskipped = iter;
-                break; 
+            
+            % Consider whether to stop polling
+            if ~options.CompletePoll            
+                % Stop polling if last poll was good
+                if goodpoll_flag
+                    if unrelgp_flag
+                        break;  % GP is unreliable, just stop polling                               
+                    elseif pless > 1-options.TolPoI
+                        break;  % Use GP prediction whether to stop polling
+                    end
+                else
+                    % No good poll so far -- if GP is reliable, stop polling 
+                    % if probability of improvement at any location is too low               
+                    if ~unrelgp_flag && ... 
+                            (options.ConsecutiveSkipping || lastskipped < iter-1) ...
+                            && optimState.pollcount >= options.MinFailedPollSteps ...
+                            && pless > 1-options.TolPoI
+                        lastskipped = iter;
+                        break;
+                    end                    
+                end
             end
 
             % Evaluate function and store value
