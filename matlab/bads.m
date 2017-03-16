@@ -56,6 +56,7 @@ function [x,fval,exitflag,output,funValues,gpstruct] = bads(fun,x0,LB,UB,PLB,PUB
 %
 % TO DO:
 % - check options.FunValues provided as argument
+% - check fvalhistory
 % - fix restarts e multibayes
 % - compute func running time and do more stuff if func is slow
 % - understand if the warping is working correctly, test moar
@@ -186,27 +187,8 @@ if nargin < 1 || strcmpi(fun, 'defaults')
     return;
 end
 
-
-%% Check that all required subfolders are on the MATLAB path
-
-subfolders = {'acq','gpdef','gpml_fast','init','poll','search','utils','warp'};
-pathCell = regexp(path, pathsep, 'split');
-baseFolder = fileparts(mfilename('fullpath'));
-
-onPath = true;
-for iFolder = 1:numel(subfolders)
-    folder = [baseFolder,filesep,subfolders{iFolder}];    
-    if ispc  % Windows is not case-sensitive
-      onPath = onPath & any(strcmpi(folder, pathCell));
-    else
-      onPath = onPath & any(strcmp(folder, pathCell));
-    end
-end
-
-% ADDPATH is slow, call it only if folders are not on path
-if ~onPath
-    addpath(genpath(fileparts(mfilename('fullpath'))));
-end
+%% Check that all BADS subfolders are on the MATLAB path
+add2path();
 
 %% Initialize display printing options
 
@@ -258,7 +240,7 @@ optimState = [];
 options = initoptions(nvars,defopts,options);    
 
 % Initalize and transform variables
-[u0,LB,UB,PLB,PUB,MeshSizeInteger,MeshSize,TolMesh,optimState] = ...
+[u0,LB,UB,PLB,PUB,MeshSizeInteger,TolMesh,optimState] = ...
     initvars(x0,LB,UB,PLB,PUB,optimState,options);
 options.TolMesh = TolMesh;
     
@@ -323,7 +305,6 @@ if options.FitLik; gplik = []; else gplik = log(options.TolFun); end
 gpstruct = feval(options.gpdefFcn{:},nvars,gplik,optimState,options,[]);
 gpstruct.fun = funwrapper;
 fhyp = gpstruct.hyp;
-if options.RotateGP && isfield(optimState,'C'); gpstruct.C = inv(optimState.C); end
 
 fvalhistory = Inf(min(1000,options.MaxIter),1);
 
@@ -338,7 +319,6 @@ optimState.iterList.fhyp = [];
 
 optimState.lastfitgp = -Inf;    % Last fcn evaluation for which the gp was trained
 lastskipped = 0;                % Last skipped iteration
-pollCount = 0;
 optimState.hedge = [];
 
 SearchSuccesses = 0;
@@ -350,9 +330,10 @@ iter = 1;
 
 while ~isFinished
     optimState.iter = iter;
-    refitted = 0;                       % gp refitted this iteration
-    action = [];
+    refitted_flag = 0;  % GP refitted this iteration
+    action = [];        % Action performed this iteration (for printing purposes)
                 
+    % Compute mesh size and search mesh size
     MeshSize = options.PollMeshMultiplier^MeshSizeInteger;
     if options.SearchSizeLocked
         optimState.SearchSizeInteger = min(0,MeshSizeInteger*options.SearchGridMultiplier - options.SearchGridNumber);
@@ -360,7 +341,7 @@ while ~isFinished
     optimState.meshsize = MeshSize;
     optimState.searchmeshsize = options.PollMeshMultiplier.^optimState.SearchSizeInteger;
     
-    % Update bounds for search mesh
+    % Update bounds to grid for search mesh
     optimState = updateSearchBounds(optimState);
     
     % Minimum improvement for a poll/search to be considered successful
@@ -369,21 +350,19 @@ while ~isFinished
         SufficientImprovement = max(SufficientImprovement, options.TolFun);
     end
 
-    SearchSufficientImprovement = SufficientImprovement;
+    optimState.SearchSufficientImprovement = SufficientImprovement;
     % Multiple successful searches raise the bar for improvement
-    % SearchSufficientImprovement = SufficientImprovement*(2^SearchSuccesses);
-    optimState.SearchSufficientImprovement = SearchSufficientImprovement;
+    % optimState.SearchSufficientImprovement = SufficientImprovement*(2^SearchSuccesses);
         
     %----------------------------------------------------------------------
     %% Search step
-
-    tic
             
-    if optimState.searchcount < options.SearchNtry && size(gpstruct.y,1) > 1
-                
+    % Perform search if there are still available attempts (and more than NVARS stored points)
+    if optimState.searchcount < options.SearchNtry && size(gpstruct.y,1) > nvars
+        
         % Check whether it is time to refit the GP
-        [refitgp,UnrelGP,optimState] = IsRefitTime(optimState,options);
-        if refitgp; gpstruct.post = []; end
+        [refitgp_flag,unrelgp_flag,optimState] = IsRefitTime(optimState,options);
+        if refitgp_flag; gpstruct.post = []; end
         
         if isempty(gpstruct.post) % || optimState.funccount > options.Ndata
             % Local GP approximation on current point
@@ -393,14 +372,13 @@ while ~isFinished
                 [], ...    %             [upoll; gridunits(x,optimState)], ...
                 optimState, ...
                 options, ...
-                refitgp);
+                refitgp_flag);
         end
         
-        % Update gp prediction at incumbent
+        % Update GP prediction at incumbent
         optimState = UpdateIncumbentPrediction(ubest,fhyp,optimState,gpstruct,options);        
         
         % Generate search set (normalized coordinates)        
-        %tic
         optimState.searchcount = optimState.searchcount + 1;        
         [usearchset,optimState] = feval(options.SearchMethod{:}, ...
             u, ...
@@ -409,7 +387,6 @@ while ~isFinished
             UB, ...
             optimState, ...
             options);    
-        %toc
         
         % Enforce periodicity
         usearchset = periodCheck(usearchset,LB,UB,optimState);
@@ -562,13 +539,13 @@ while ~isFinished
         fvalold = fval;
         
         if (SearchImprovement > 0 && options.SloppyImprovement) ...
-                || SearchImprovement > SearchSufficientImprovement
+                || SearchImprovement > optimState.SearchSufficientImprovement
             if options.AcqHedge
                 method = optimState.hedge.str{optimState.hedge.chosen};
             else
                 method = feval(options.SearchMethod{:},[],[],[],[],optimState);
             end
-            if SearchImprovement > SearchSufficientImprovement
+            if SearchImprovement > optimState.SearchSufficientImprovement
                 SearchSuccesses = SearchSuccesses + 1;
                 searchstring = ['Successful search (' method ')'];
                 optimState.usuccess = [optimState.usuccess; usearch];
@@ -691,9 +668,9 @@ while ~isFinished
             if isempty(upoll); break; end
             
             % Check whether it is time to refit the GP
-            [refitgp,UnrelGP,optimState] = IsRefitTime(optimState,options);
-            if ~options.PollTraining && iter > 1; refitgp = 0; end
-            if refitgp || optimState.pollcount == 0; gpstruct.post = []; end
+            [refitgp_flag,unrelgp_flag,optimState] = IsRefitTime(optimState,options);
+            if ~options.PollTraining && iter > 1; refitgp_flag = 0; end
+            if refitgp_flag || optimState.pollcount == 0; gpstruct.post = []; end
             
             % Local GP approximation around polled points
             if isempty(gpstruct.post) % || optimState.funccount > options.Ndata
@@ -703,8 +680,8 @@ while ~isFinished
                     upoll, ...
                     optimState, ...
                     options, ...
-                    refitgp);
-                if refitgp; refitted = 1; end
+                    refitgp_flag);
+                if refitgp_flag; refitted_flag = 1; end
             end
 
             gpstruct.ystar = fpollbest;     % Best reference value
@@ -735,7 +712,7 @@ while ~isFinished
                 pless = prod(1-fpi(1:min(nvars,end)));
             else
                 pless = 0;
-                UnrelGP = 1;
+                unrelgp_flag = 1;
             end
 
             % If the probability of improvement at any location is
@@ -743,8 +720,8 @@ while ~isFinished
             % a good candidate was already found OR if the
             % FASTCONVERGENCE option is on (in this case, a safety flag
             % prevents from doing it twice in a row)                
-            if ( UnrelGP && goodpoll ) || ...
-               ( ~UnrelGP && ... 
+            if ( unrelgp_flag && goodpoll ) || ...
+               ( ~unrelgp_flag && ... 
             (goodpoll || ((options.ConsecutiveSkipping || lastskipped < iter-1) && optimState.pollcount >= options.MinFailedPollSteps) ) ...
                     && mean(pless) > 1-options.TolPoI )
 %                if (goodpoll || (options.FastConvergence && lastskipped < iter-1) ) ...
@@ -857,13 +834,12 @@ while ~isFinished
 
         MeshSize = options.PollMeshMultiplier^MeshSizeInteger;
         optimState.meshsize = MeshSize;
-        pollCount = pollCount + 1;
 
         % Print iteration
         if any(strcmpi(options.Display,{'iter','all'}))
             if SuccessPoll; string = 'Successful poll'; else string = 'Refine grid'; end
             action = [];
-            if refitted; if isempty(action); action = 'Train'; else action = [action ', train']; end; end            
+            if refitted_flag; if isempty(action); action = 'Train'; else action = [action ', train']; end; end            
             if lastskipped == iter; if isempty(action); action = 'Skip'; else action = [action ', skip']; end; end
             if options.UncertaintyHandling
                 fprintf(displayFormat,iter,optimState.funccount,fval,fsd,MeshSize,string,action);                
@@ -1035,16 +1011,16 @@ end
 end
 
 %--------------------------------------------------------------------------
-function [refitgp,UnrelGP,optimState] = IsRefitTime(optimState,options)
-%ISREFITTIME Check if it is time to retrain the Gaussian Process
+function [refitgp_flag,unrelgp_flag,optimState] = IsRefitTime(optimState,options)
+%ISREFITTIME Check if it is time to retrain the Gaussian Process.
 
 nvars = size(optimState.X,2);
 
 % Check gp prediction statistics (track model reliability)
 try
-    UnrelGP = gppredcheck(optimState.gpstats,options.NormAlphaLevel);
+    unrelgp_flag = gppredcheck(optimState.gpstats,options.NormAlphaLevel);
 catch
-    UnrelGP = 1;
+    unrelgp_flag = 1;
 end
 
 if optimState.funccount < 200
@@ -1053,16 +1029,15 @@ else
     refitperiod = nvars*5;
 end
 
-refitgp = optimState.lastfitgp < (optimState.funccount - options.MinRefitTime) && ...
-    (optimState.gpstats.last >= refitperiod || UnrelGP) && optimState.funccount > nvars;
+refitgp_flag = optimState.lastfitgp < (optimState.funccount - options.MinRefitTime) && ...
+    (optimState.gpstats.last >= refitperiod || unrelgp_flag) && ...
+    optimState.funccount > nvars;
 
-if refitgp
-    %[plo,t,phi]
-    %[gpstruct.hyp.cov(:)',gpstruct.hyp.lik]
+if refitgp_flag
     optimState.lastfitgp = optimState.funccount;
-    % Reset gp prediction statistics
+    % Reset GP prediction statistics
     optimState.gpstats = savegpstats([],[],[],[],ones(1,max(1,options.gpSamples)));
-    UnrelGP = 0;
+    unrelgp_flag = 0;
 end
 
 end
@@ -1437,4 +1412,29 @@ switch lower(method(1:3))
         end
          
 end
+end
+
+%--------------------------------------------------------------------------
+function add2path()
+%ADD2PATH Adds BADS subfolders to MATLAB path.
+
+subfolders = {'acq','gpdef','gpml_fast','init','poll','search','utils','warp'};
+pathCell = regexp(path, pathsep, 'split');
+baseFolder = fileparts(mfilename('fullpath'));
+
+onPath = true;
+for iFolder = 1:numel(subfolders)
+    folder = [baseFolder,filesep,subfolders{iFolder}];    
+    if ispc  % Windows is not case-sensitive
+      onPath = onPath & any(strcmpi(folder, pathCell));
+    else
+      onPath = onPath & any(strcmp(folder, pathCell));
+    end
+end
+
+% ADDPATH is slow, call it only if folders are not on path
+if ~onPath
+    addpath(genpath(fileparts(mfilename('fullpath'))));
+end
+
 end

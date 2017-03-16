@@ -1,4 +1,4 @@
-function [u0,LB,UB,PLB,PUB,MeshSizeInteger,MeshSize,TolMesh,optimState] = initvars(x0,LB,UB,PLB,PUB,optimState,options)
+function [u0,LB,UB,PLB,PUB,MeshSizeInteger,TolMesh,optimState] = initvars(x0,LB,UB,PLB,PUB,optimState,options)
 %INITVARS Initialize variables and transform coordinates.
 
 nvars = numel(x0);
@@ -44,8 +44,7 @@ end
 % Grid parameters
 MeshSizeInteger = 0;        % Mesh size in log base units
 optimState.SearchSizeInteger = min(0,MeshSizeInteger*options.SearchGridMultiplier - options.SearchGridNumber);
-MeshSize = options.PollMeshMultiplier^MeshSizeInteger;
-optimState.meshsize = MeshSize;
+optimState.meshsize = options.PollMeshMultiplier^MeshSizeInteger;
 optimState.searchmeshsize = options.PollMeshMultiplier.^optimState.SearchSizeInteger;
 optimState.scale = 1;
 

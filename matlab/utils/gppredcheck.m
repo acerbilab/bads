@@ -1,8 +1,9 @@
-function h = gppredcheck(gpstats,alpha)
-%GPPREDCHECK Check calibration of Gaussian process prediction
+function [h,p] = gppredcheck(gpstats,alpha)
+%GPPREDCHECK Check calibration of Gaussian process prediction.
 
 n = gpstats.last;
 idx = 1:n;
+p = NaN;
 
 % No predictions available, test failed
 if n == 0; h = 1; return; end
@@ -26,7 +27,5 @@ if n < 3
         h = 0;
     end                
 else
-    h = swtest(zscores, alpha);
-end
-
+    [h,p] = swtest(zscores, alpha);
 end

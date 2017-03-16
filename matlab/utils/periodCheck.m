@@ -1,5 +1,5 @@
 function x = periodCheck(x,LB,UB,optimState,xgridscaled)
-%PERIODCHECK Check and move periodic variables to main range
+%PERIODCHECK Check and move periodic variables to main range.
 
 if ~any(optimState.periodicvars); return; end
 

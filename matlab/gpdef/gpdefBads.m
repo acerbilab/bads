@@ -110,6 +110,11 @@ if isempty(gpstruct)
         gpstruct.bounds.cov{end+1} = [-5;5];
     end
     
+    % Rotate GP axes (unsupported)
+    if options.RotateGP && isfield(optimState,'C')
+        gpstruct.C = inv(optimState.C);
+    end
+        
     %% GP likelihood function
 
     gpstruct.hyp.lik = [];    
@@ -192,7 +197,7 @@ if isempty(gpstruct)
     
     % Do not marginalize hyperparameters (needs gpml_extensions toolbox)
     gpstruct.marginalize = 0;
-        
+            
 else    % Update existing GP struct
     
     % We assume that the mean of the GP is higher than what we see
