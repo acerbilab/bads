@@ -1,5 +1,5 @@
 function [x,fval,exitflag,output,funValues,gpstruct] = bads(fun,x0,LB,UB,PLB,PUB,options,varargin)
-%BADS Constrained optimization using Bayesian pattern search
+%BADS Constrained optimization using Bayesian Adaptive Direct Search
 %   BADS attempts to solve problems of the form:
 %       min F(X)  subject to:  LB <= X <= UB
 %        X
@@ -405,11 +405,13 @@ while ~isFinished
             
             % Evaluate acquisition function on search set
             try
+                %----------------------------------------------------------
                 if options.AcqHedge
                     [optimState.hedge,acqIndex,ymu,ys] = ...
                         acqPortfolio('acq',optimState.hedge,usearchset,optimState.ftarget,fstarget,gpstruct,optimState,options,SufficientImprovement);
                     index = acqIndex(optimState.hedge.chosen);
                     z = 1;
+                %----------------------------------------------------------
                 else
                     % Batch evaluation of acquisition function on search set
                     [z,~,ymu,ys] = ...
@@ -428,8 +430,9 @@ while ~isFinished
                         
             acqu = [];
             
+            %--------------------------------------------------------------
             % Local optimization of the acquisition function 
-            % (Note that generally it does not improve results)
+            % (generally it does not improve results)
             if options.SearchOptimize
                 acqoptoptions = optimset('Display','off','GradObj','off','DerivativeCheck','off',...
                     'TolX',options.TolMesh,'TolFun',options.TolFun);
@@ -451,6 +454,7 @@ while ~isFinished
                     acqu = [];
                 end
             end
+            %--------------------------------------------------------------
             
             if isempty(acqu); acqu = usearchset(index,:); end
             
@@ -501,20 +505,26 @@ while ~isFinished
             searchdist = 0;
         end
         
-        % CMA-ES like estimation of local covariance structure
+        %------------------------------------------------------------------
+        % CMA-ES like estimation of local covariance structure (unused)
         if options.HessianUpdate && strcmpi(options.HessianMethod,'cmaes')
             optimState = covmatadapt(u,LB,UB,gpstruct,optimState,options);
         end
+        %------------------------------------------------------------------
                 
         % Evaluate search
         SearchImprovement = fval - fsearch + 0*(fsd  - fsearchsd);
         fvalold = fval;
         
+        % Declare if search was success or failure
         if (SearchImprovement > 0 && options.SloppyImprovement) ...
                 || SearchImprovement > optimState.SearchSufficientImprovement
+            % Search did not fail
+            %--------------------------------------------------------------
             if options.AcqHedge
                 method = optimState.hedge.str{optimState.hedge.chosen};
             else
+            %--------------------------------------------------------------                
                 method = feval(options.SearchMethod{:},[],[],[],[],optimState);
             end
             if SearchImprovement > optimState.SearchSufficientImprovement
@@ -535,6 +545,7 @@ while ~isFinished
             if options.UncertaintyHandling; gpstruct = gpstructnew; end
             gpstruct.post = []; % Reset posterior
         else
+            % Search failed
             searchstatus = 'failure';
             searchstring = [];
             
@@ -547,6 +558,7 @@ while ~isFinished
             %end            
         end
                         
+        %------------------------------------------------------------------
         % Update portfolio acquisition function
         if options.AcqHedge && ~isempty(usearchset)            
             optimState.hedge = ...
@@ -558,18 +570,20 @@ while ~isFinished
             optimState.hedge = ...
                 acqPortfolio('update',optimState.hedge,usearch,fsearch,fsearchsd,gpstruct,optimState,options,SufficientImprovement,fvalold,MeshSize);            
         end
+        %------------------------------------------------------------------
                 
         % Update search statistics and search scale factor
        optimState = UpdateSearch(optimState,searchstatus,searchdist,options);
-                
-        if ~isempty(searchstring) && any(strcmpi(options.Display,{'all','iter'}))
-            if options.UncertaintyHandling
-                fprintf(displayFormat,iter,optimState.funccount,fval,fsd,MeshSize,searchstring,'');                
-            else
-                fprintf(displayFormat,iter,optimState.funccount,fval,MeshSize,searchstring,'');
-            end
-        end
-            
+       
+       % Print search results       
+       if trace > 2 && ~isempty(searchstring)
+           if options.UncertaintyHandling
+               fprintf(displayFormat,iter,optimState.funccount,fval,fsd,MeshSize,searchstring,'');                
+           else
+               fprintf(displayFormat,iter,optimState.funccount,fval,MeshSize,searchstring,'');
+           end
+       end
+       
     end % Search step
 
     % Decide whether to perform the poll step
@@ -606,7 +620,7 @@ while ~isFinished
         fpollhyp = fhyp;                % gp hyper-parameters at best point
         fpollbestsd = fsd;              % Uncertainty of objective func
         optimState.pollcount = 0;       % Poll iterations
-        goodpoll = 0;                   % Found a good poll
+        goodpoll_flag = false;          % Found a good poll
         B = [];                         % Poll basis
         upoll = [];                     % Poll vectors
         unew = [];
@@ -692,9 +706,9 @@ while ~isFinished
             % a good candidate was already found OR if the
             % FASTCONVERGENCE option is on (in this case, a safety flag
             % prevents from doing it twice in a row)                
-            if ( unrelgp_flag && goodpoll ) || ...
+            if ( unrelgp_flag && goodpoll_flag ) || ...
                ( ~unrelgp_flag && ... 
-            (goodpoll || ((options.ConsecutiveSkipping || lastskipped < iter-1) && optimState.pollcount >= options.MinFailedPollSteps) ) ...
+            (goodpoll_flag || ((options.ConsecutiveSkipping || lastskipped < iter-1) && optimState.pollcount >= options.MinFailedPollSteps) ) ...
                     && mean(pless) > 1-options.TolPoI )
 %                if (goodpoll || (options.FastConvergence && lastskipped < iter-1) ) ...
 %                        && pless > 1-options.TolPoI
@@ -740,7 +754,7 @@ while ~isFinished
                 fpollbestsd = fnewsd;
                 PollImprovement = fval - fpollbest + 0*(fsd - fpollbestsd);
                 if PollImprovement > SufficientImprovement
-                    goodpoll = 1;
+                    goodpoll_flag = true;
                 end
             end
 
@@ -752,7 +766,7 @@ while ~isFinished
         % Evaluate poll
         if (PollImprovement > 0 && options.SloppyImprovement) || ...
                 PollImprovement > SufficientImprovement
-            polldirection = find(abs(upollbest - ubest) > 1e-12,1); % The sign might be wrong for periodic variables (it's unused anyhow)            
+            polldirection = find(abs(upollbest - ubest) > 1e-12,1); % The sign might be wrong for periodic variables (unused anyhow)            
             [ubest,fval,fsd,optimState,gpstruct] = UpdateIncumbent(ubest,fval,fsd,upollbest,fpollbest,fpollbestsd,optimState,gpstruct,options);
             u = ubest;
         end
@@ -839,7 +853,7 @@ while ~isFinished
     end % Poll step
 
     % Moved during the poll step
-    if goodpoll; gpstruct.post = []; end    
+    if goodpoll_flag; gpstruct.post = []; end    
     
     %----------------------------------------------------------------------
     %% Finalize iteration

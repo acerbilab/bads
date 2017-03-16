@@ -1,5 +1,5 @@
 function optimState = covmatadapt(u,LB,UB,gpstruct,optimState,options)
-%COVMATADAPT Covariance matrix adaptation (CMA)
+%COVMATADAPT Covariance matrix adaptation (CMA).
 
 nvars = size(u,2);
 
