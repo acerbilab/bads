@@ -1,5 +1,5 @@
-function xs = searchei(x0,gpstruct,LB,UB,Scale,optimState,options)
-%SEARCHEI Search step by local maximization of expected improvement.
+function xs = searchOptim(x0,gpstruct,LB,UB,Scale,optimState,options)
+%SEARCHOPTIM Search step by local maximization of expected improvement.
 
 if nargin < 1
     xs = 'ei';
@@ -20,7 +20,7 @@ while funcCount < options.Nsearch && idx <= 10
     try
         optoptions.MaxFunEval = options.Nsearch - funcCount;
         % [xs(idx,:),~,~,output] = fmincon(@(x_) LowestUpperBound(x_,gpstruct,Scale),x0,[],[],[],[],LB,UB,[],optoptions);
-        [xs(idx,:),~,~,output] = fmincon(@(x_) NegExpectedImprovement(x_,gpstruct),x0,[],[],[],[],LB,UB,[],optoptions);
+        [xs(idx,:),~,~,output] = fmincon(@(x_) NegExpectedImprovement(x_,optimState.ftarget,gpstruct),x0,[],[],[],[],LB,UB,[],optoptions);
         funcCount = funcCount + output.funcCount;
     catch
         warning('ah');
@@ -32,7 +32,7 @@ end
 end
 
 %--------------------------------------------------------------------------
-function [y,dy] = NegExpectedImprovement(xi,gpstruct,scale)
+function [y,dy] = NegExpectedImprovement(xi,target,gpstruct,scale)
 %NEGEXPECTEDIMPROVEMENT Return NFEI
 
 if ~isempty(gpstruct.x0)
@@ -48,7 +48,7 @@ for i = 1:Nhyp; hypw(i) = gpstruct.hypweight(i); end
 fs = sqrt(fs2);
 ys = sqrt(ys2);
 
-gammaz = (gpstruct.ystar - fmu)./fs;
+gammaz = (target - fmu)./fs;
 fpi = 0.5*erfc(-gammaz/sqrt(2));    % Probability of improvement
 y = -fs.*(gammaz.*fpi + exp(-0.5*gammaz.^2)/sqrt(2*pi));
 y = sum(bsxfun(@times,hypw,y),1);
@@ -60,7 +60,7 @@ if any(isnan(y) | isinf(y))
 end
 
 dfs = 0.5*dfs2./fs;
-dgammaz = -(dfmu.*fs + (gpstruct.ystar - fmu).*dfs)./fs2;
+dgammaz = -(dfmu.*fs + (target - fmu).*dfs)./fs2;
 dfpi = -0.5*dgammaz/sqrt(2)*(-2*exp(-gammaz.^2/2)/sqrt(pi));
 
 dy = -(dfs.*gammaz.*fpi + dgammaz.*fs.*fpi + dfpi.*gammaz.*fs) ...

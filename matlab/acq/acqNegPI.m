@@ -34,7 +34,7 @@ end
 if grad_flag
     % Gradient of probability of improvement
     dfs = 0.5*dfs2./fs;
-    dgammaz = -(dfmu.*fs + (gpstruct.ystar - fmu).*dfs)./fs2;
+    dgammaz = -(dfmu.*fs + (target - fmu).*dfs)./fs2;
     dz = 0.5*dgammaz/sqrt(2)*(-2*exp(-gammaz.^2/2)/sqrt(pi));
     
     dz = sum(bsxfun(@times,hypw,dz(~isnan(hypw),:)),1);    

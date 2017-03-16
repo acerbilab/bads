@@ -132,7 +132,7 @@ defopts.MinNdata                = '50                   % Minimum number of trai
 defopts.BufferNdata             = '100                  % Max number of training data removed if too far from current point';
 defopts.gpSamples               = '0                    % Hyperparameters samples (0 = optimize)';
 defopts.MinRefitTime            = '2*nvars              % Minimum fcn evals before refitting the gp';
-defopts.PollTraining            = 'yes                  % Train gp also during poll step';
+defopts.PollTraining            = 'yes                  % Train gp also during poll stage';
 defopts.DoubleRefit             = 'off                  % Try a second fit';
 defopts.gpMeanPercentile        = '90                   % Percentile of empirical GP mean';
 defopts.gpMeanRangeFun          = '@(ym,y) (ym - prctile(y,50))/5*2   % Empirical range of hyperprior over the mean';
@@ -145,8 +145,8 @@ defopts.UseEffectiveRadius      = 'yes                   %';
 defopts.gpCovPrior              = 'iso                  % GP hyper-prior over covariance';
 defopts.gpFixedMean             = 'no';
 defopts.FitLik                  = 'yes                  % Fit the likelihood term';
-defopts.PollAcqFcn              = '@acqNegEI            % Acquisition fcn for poll step';
-defopts.SearchAcqFcn            = '@acqNegEI            % Acquisition fcn for search step';
+defopts.PollAcqFcn              = '@acqNegEI            % Acquisition fcn for poll stage';
+defopts.SearchAcqFcn            = '@acqNegEI            % Acquisition fcn for search stage';
 defopts.AcqHedge                = 'off                  % Hedge acquisition function';
 defopts.CholAttempts            = '0                    % Attempts at performing the Cholesky decomposition';
 defopts.NoiseNudge              = '[1 0]                % Increase nudge to noise in case of Cholesky failure';
@@ -330,8 +330,8 @@ iter = 1;
 
 while ~isFinished
     optimState.iter = iter;
-    refitted_flag = 0;  % GP refitted this iteration
-    action = [];        % Action performed this iteration (for printing purposes)
+    refitted_flag = false;  % GP refitted this iteration
+    action = [];            % Action performed this iteration (for printing purposes)
                 
     % Compute mesh size and search mesh size
     MeshSize = options.PollMeshMultiplier^MeshSizeInteger;
@@ -355,10 +355,14 @@ while ~isFinished
     % optimState.SearchSufficientImprovement = SufficientImprovement*(2^SearchSuccesses);
         
     %----------------------------------------------------------------------
-    %% Search step
+    %% Search stage
             
-    % Perform search if there are still available attempts (and more than NVARS stored points)
-    if optimState.searchcount < options.SearchNtry && size(gpstruct.y,1) > nvars
+    % Perform search if there are still available attempts, and if there 
+    % are more than NVARS stored points
+    DoSearchStep_flag = optimState.searchcount < options.SearchNtry ...
+        && size(gpstruct.y,1) > nvars;
+    
+    if DoSearchStep_flag
         
         % Check whether it is time to refit the GP
         [refitgp_flag,~,optimState] = IsRefitTime(optimState,options);
@@ -576,7 +580,7 @@ while ~isFinished
        optimState = UpdateSearch(optimState,searchstatus,searchdist,options);
        
        % Print search results       
-       if trace > 2 && ~isempty(searchstring)
+       if prnt > 2 && ~isempty(searchstring)
            if options.UncertaintyHandling
                fprintf(displayFormat,iter,optimState.funccount,fval,fsd,MeshSize,searchstring,'');                
            else
@@ -584,35 +588,35 @@ while ~isFinished
            end
        end
        
-    end % Search step
+    end % Search stage
 
-    % Decide whether to perform the poll step
+    % Decide whether to perform the poll stage
     switch optimState.searchcount
         case {0, options.SearchNtry}    % Skipped or just finished search             
             optimState.searchcount = 0;
             if SearchSuccesses > 0 && options.SkipPollAfterSearch
-                DoPollStep = 0;
+                DoPollStep_flag = false;
                 SearchSpree = SearchSpree + 1;
                 if options.SearchMeshExpand > 0 && ...
                         mod(SearchSpree,options.SearchMeshExpand) == 0
                     MeshSizeInteger = min(MeshSizeInteger + options.SearchMeshIncrement, options.MaxPollGridNumber);
                 end
             else
-                DoPollStep = 1;
+                DoPollStep_flag = true;
                 SearchSpree = 0;
             end
             SearchSuccesses = 0;
             % optimState.searchfactor = 1;
         otherwise                       % In-between searches, no poll
-            DoPollStep = 0;
+            DoPollStep_flag = false;
     end
             
     %----------------------------------------------------------------------
-    %% Poll step  
+    %% Poll stage  
 
     u = ubest;
     
-    if DoPollStep
+    if DoPollStep_flag
         
         PollImprovement = 0;            % Improvement so far
         upollbest = u;                  % Best poll point
@@ -644,8 +648,12 @@ while ~isFinished
                 % GP-based vector scaling
                 vv = bsxfun(@times,Bnew*MeshSize,gpstruct.pollscale);
                 
-                upollnew = periodCheck(bsxfun(@plus,u,vv),LB,UB,optimState);
+                % Add vector to current point, fix to grid
+                upollnew = bsxfun(@plus,u,vv);
+                upollnew = periodCheck(upollnew,LB,UB,optimState);
                 upollnew = uCheck(upollnew,options.TolMesh,optimState,0);
+                
+                % Add new poll points to polling set
                 upoll = [upoll; upollnew];
                 B = [B; Bnew];                    
             end
@@ -655,11 +663,13 @@ while ~isFinished
             
             % Check whether it is time to refit the GP
             [refitgp_flag,unrelgp_flag,optimState] = IsRefitTime(optimState,options);
-            if ~options.PollTraining && iter > 1; refitgp_flag = 0; end
-            if refitgp_flag || optimState.pollcount == 0; gpstruct.post = []; end
+            if ~options.PollTraining && iter > 1; refitgp_flag = false; end
+            
+            % Rebuild GP local approximation if refitting or if at beginning of polling stage
+            if refitgp_flag || optimState.pollcount; gpstruct.post = []; end
             
             % Local GP approximation around polled points
-            if isempty(gpstruct.post) % || optimState.funccount > options.Ndata
+            if isempty(gpstruct.post)
                 gpstruct = gpTrainingSet(gpstruct, ...
                     options.gpMethod, ...
                     u, ...
@@ -667,10 +677,8 @@ while ~isFinished
                     optimState, ...
                     options, ...
                     refitgp_flag);
-                if refitgp_flag; refitted_flag = 1; end
+                if refitgp_flag; refitted_flag = true; end
             end
-
-            gpstruct.ystar = fpollbest;     % Best reference value
 
             optimState = UpdateTarget(upollbest,fpollhyp,optimState,gpstruct,options);
                         
@@ -691,8 +699,8 @@ while ~isFinished
             % Compute probability that improvement at any location is 
             % less than SufficientImprovement (assumes independence --
             % conservative estimate towards continuing polling)
-            gammaz = (gpstruct.ystar - SufficientImprovement - fm)./fs;
-            if isfinite(gammaz) & isreal(gammaz)
+            gammaz = (optimState.ftarget - SufficientImprovement - fm)./fs;
+            if all(isfinite(gammaz) & isreal(gammaz))
                 fpi = 0.5*erfc(-gammaz/sqrt(2));
                 fpi = sort(fpi,'descend');
                 pless = prod(1-fpi(1:min(nvars,end)));
@@ -792,7 +800,8 @@ while ~isFinished
             % Profile plot of iteration
             if strcmpi(options.Plot,'profile') && ~isempty(gpstruct.x)
                 % figure(iter);
-                hold off;                
+                gpstruct.ftarget = optimState.ftarget;
+                hold off;
                 landscapeplot(@(u_) funwrapper(origunits(u_,optimState)), ...
                     u, ...
                     LB, ...
@@ -850,9 +859,9 @@ while ~isFinished
         %[H; H2]
         % [inv(H2); optimState.Binv]
         
-    end % Poll step
+    end % Poll stage
 
-    % Moved during the poll step
+    % Moved during the poll stage
     if goodpoll_flag; gpstruct.post = []; end    
     
     %----------------------------------------------------------------------
@@ -879,7 +888,7 @@ while ~isFinished
     end
         
     % Store best points at the end of each iteration
-    if DoPollStep || isFinished
+    if DoPollStep_flag || isFinished
         optimState.iterList.u(iter,:) = u;
         optimState.iterList.fval(iter,1) = fval;
         optimState.iterList.fsd(iter,1) = fsd;
@@ -887,7 +896,7 @@ while ~isFinished
     end
     
     % Re-evaluate all points
-    if DoPollStep && options.UncertaintyHandling                        
+    if DoPollStep_flag && options.UncertaintyHandling                        
         if iter > 1
             optimState = reevaluateIterList(optimState,gpstruct,options);
 
@@ -910,8 +919,8 @@ while ~isFinished
             Restarts = Restarts - 1;
         end
     else
-        % Iteration count is increased after the poll step
-        if DoPollStep; iter = iter + 1; end        
+        % Iteration count is increased after the poll stage
+        if DoPollStep_flag; iter = iter + 1; end        
     end
 
 end

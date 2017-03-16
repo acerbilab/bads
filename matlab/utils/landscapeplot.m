@@ -119,7 +119,7 @@ if nargin < 3 || isempty(eta); eta = 0; end
 ys = sqrt(ys2);
 fs = sqrt(fs2);
 
-gammaz = (gpstruct.ystar + eta - fm)./fs;
+gammaz = (gpstruct.ftarget + eta - fm)./fs;
 fpi = 0.5*erfc(-gammaz/sqrt(2));    % Probability of improvement
 nfei = -fs.*(gammaz.*fpi + exp(-0.5*(gammaz.^2))/sqrt(2*pi));
 nfei = sum(bsxfun(@times,hypw,nfei),1);
