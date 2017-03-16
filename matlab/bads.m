@@ -57,6 +57,7 @@ function [x,fval,exitflag,output,funValues,gpstruct] = bads(fun,x0,LB,UB,PLB,PUB
 % TO DO:
 % - check options.FunValues provided as argument
 % - check fvalhistory
+% - play around with OPTIONS.ImprovementQuantile
 % - fix restarts e multibayes
 % - compute func running time and do more stuff if func is slow
 % - understand if the warping is working correctly, test moar
@@ -95,6 +96,7 @@ defopts.ForcingExponent         = '3/2                  % Exponent of forcing fu
 %defopts.PollMeshMultiplier      = '2                    % Mesh multiplicative factor between iterations';
 defopts.PollMeshMultiplier      = '4                    % Mesh multiplicative factor between iterations';
 defopts.IncumbentSigmaMultiplier = '0.1                 % Multiplier to incumbent uncertainty for acquisition functions';
+options.ImprovementQuantile     = '0.5                  % Quantile when computing improvement (<0.5 for conservative improvement)';
 defopts.AlternativeIncumbent    = 'off                  % Use alternative incumbent offset';
 defopts.AdaptiveIncumbentShift  = 'off                  % Adaptive multiplier to incumbent uncertainty';
 defopts.NonlinearScaling        = 'on                   % Allow nonlinear rescaling of variables if deemed useful';
@@ -518,7 +520,8 @@ while ~isFinished
         %------------------------------------------------------------------
                 
         % Evaluate search
-        SearchImprovement = fval - fsearch + 0*(fsd  - fsearchsd);
+        
+        SearchImprovement = EvalImprovement(fval,fsearch,fsd,fsearchsd,options.ImprovementQuantile);
         fvalold = fval;
         
         % Declare if search was success or failure
@@ -619,7 +622,7 @@ while ~isFinished
     
     if DoPollStep_flag
         
-        PollImprovement = 0;            % Improvement so far
+        PollBestImprovement = 0;        % Best improvement so far
         upollbest = u;                  % Best poll point
         fpollbest = fval;               % Objective value at best point
         fpollhyp = fhyp;                % gp hyper-parameters at best point
@@ -684,11 +687,13 @@ while ~isFinished
             optimState = UpdateTarget(upollbest,fpollhyp,optimState,gpstruct,options);
                         
             % Evaluate acquisition function on poll vectors
+            %--------------------------------------------------------------
             if options.AcqHedge
                 [optimState.hedge,acqIndex,ymu,ys,fm,fs] = ...
                     acqPortfolio('acq',optimState.hedge,upoll,optimState.ftarget,fstarget,gpstruct,optimState,options,SufficientImprovement);
                 index = acqIndex(optimState.hedge.chosen);
             else
+            %--------------------------------------------------------------
                 % Batch evaluation of acquisition function on search set
                 [z,~,ymu,ys,fm,fs] = feval(options.PollAcqFcn{:},upoll,optimState.ftarget,gpstruct,optimState,0);
                 [~,index] = min(z);                
@@ -734,42 +739,42 @@ while ~isFinished
 
             % Evaluate function and store value
             unew = upoll(index,:);
-            [fnew,optimState] = funlogger(funwrapper,unew,optimState,'iter');
+            [fpoll,optimState] = funlogger(funwrapper,unew,optimState,'iter');
             
             % Remove polled vector from set
             upoll(index,:) = [];
 
             % Save statistics of gp prediction
             optimState.gpstats = ...
-                savegpstats(optimState.gpstats,fnew,ymu(:,index),ys(:,index),gpstruct.hypweight);
+                savegpstats(optimState.gpstats,fpoll,ymu(:,index),ys(:,index),gpstruct.hypweight);
             
             if options.UncertaintyHandling
-                % Add search point to training set
+                % Add just polled point to training set
                 gpstruct = gpTrainingSet(gpstruct, ...
                     'add', ...
                     unew, ...
-                    fnew, ...
+                    fpoll, ...
                     optimState, ...
                     options, ...
                     0);
                 
                 % Compute estimated function value at point
-                [~,~,fnew,fs2] = gppred(unew,gpstruct);
-                fnewsd = sqrt(fs2);
-                
-                % Computed poll improvement
+                [~,~,fpoll,fs2] = gppred(unew,gpstruct);
+                fpollsd = sqrt(fs2);
             else
-                fnewsd = 0;                
+                fpollsd = 0;                
             end
             
-            % Found better objective function value
-            if fnew - fpollbest + 0*(fnewsd - fpollbestsd) < 0 
+            % Check if current point improves over best polled point so far
+            PollImprovement = EvalImprovement(fval,fpoll,fsd,fpollsd,options.ImprovementQuantile);
+            
+            if PollImprovement > PollBestImprovement 
                 upollbest = unew;
-                fpollbest = fnew;
+                fpollbest = fpoll;
                 fpollhyp = gpstruct.hyp;
-                fpollbestsd = fnewsd;
-                PollImprovement = fval - fpollbest + 0*(fsd - fpollbestsd);
-                if PollImprovement > SufficientImprovement
+                fpollbestsd = fpollsd;
+                PollBestImprovement = PollImprovement;
+                if PollBestImprovement > SufficientImprovement
                     goodpoll_flag = true;
                 end
             end
@@ -780,14 +785,14 @@ while ~isFinished
         end % Poll loop
         
         % Evaluate poll
-        if (PollImprovement > 0 && options.SloppyImprovement) || ...
-                PollImprovement > SufficientImprovement
+        if (PollBestImprovement > 0 && options.SloppyImprovement) || ...
+                PollBestImprovement > SufficientImprovement
             polldirection = find(abs(upollbest - ubest) > 1e-12,1); % The sign might be wrong for periodic variables (unused anyhow)            
             [ubest,fval,fsd,optimState,gpstruct] = UpdateIncumbent(ubest,fval,fsd,upollbest,fpollbest,fpollbestsd,optimState,gpstruct,options);
             u = ubest;
         end
 
-        if PollImprovement > SufficientImprovement
+        if PollBestImprovement > SufficientImprovement
             % Successful poll
             MeshSizeInteger = min(MeshSizeInteger + 1, options.MaxPollGridNumber);
             SuccessPoll = 1;
@@ -856,7 +861,7 @@ while ~isFinished
             gpstruct = gpTrainingSet(gpstruct, ...
                 'add', ...
                 unew, ...
-                fnew, ...
+                fpoll, ...
                 optimState, ...
                 options, ...
                 0);
@@ -1044,7 +1049,31 @@ if refitgp_flag
 end
 
 end
-              
+
+%--------------------------------------------------------------------------
+function z = EvalImprovement(fbase,fnew,sbase,snew,q)
+%EVALIMPROVEMENT Evaluate optimization improvement.
+%   Z = EVALIMPROVEMENT(FBASE,FNEW) returns the improvement of FNEW over 
+%   FBASE for a minimization problem (larger improvements are better).
+%
+%   Z = EVALIMPROVEMENT(FBASE,FNEW,SBASE,SNEW,Q) evaluates the quantile 
+%   improvement for uncertain estimates of FBASE and FNEW with standard 
+%   deviations, respectively, FNEW and FBASE. Q is the desired quantile.
+
+if nargin < 3
+    z = fbase - fnew;
+else
+    if q <= 0 || q >= 1
+        error('Quantile Q for robust improvement should be greater than 0 and less than 1.');
+    end
+    mu = fbase - fnew;
+    sigma = sqrt(sbase^2 + snew^2);    
+    x0 = -sqrt(2).*erfcinv(2*q);
+    z = sigma.*x0 + mu;
+end
+
+end
+
 %--------------------------------------------------------------------------
 function [unew,fvalnew,fsdnew,optimState,gpstruct] = UpdateIncumbent(uold,fvalold,fsdold,unew,fvalnew,fsdnew,optimState,gpstruct,options)
 %UPDATEINCUMENT Move to a new point
