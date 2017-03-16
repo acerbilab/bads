@@ -635,7 +635,8 @@ while ~isFinished
 
         % Poll loop
         while (~isempty(upoll) || isempty(B)) ...
-                && optimState.funccount < options.MaxFunEvals
+                && optimState.funccount < options.MaxFunEvals ...
+                && optimState.pollcount <= nvars*2
 
             % Fill in basis vectors
             Bnew = feval(options.PollMethod{:}, ...
@@ -670,7 +671,7 @@ while ~isFinished
             if ~options.PollTraining && iter > 1; refitgp_flag = false; end
             
             % Rebuild GP local approximation if refitting or if at beginning of polling stage
-            if refitgp_flag || optimState.pollcount; gpstruct.post = []; end
+            if refitgp_flag || optimState.pollcount == 0; gpstruct.post = []; end
             
             % Local GP approximation around polled points
             if isempty(gpstruct.post)
@@ -781,6 +782,7 @@ while ~isFinished
 
             optimState.pollcount = optimState.pollcount + 1;
 
+            
             if optimState.pollcount > nvars*2; break; end
         end % Poll loop
         
