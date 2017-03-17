@@ -1,4 +1,4 @@
-function [u0,LB,UB,PLB,PUB,MeshSizeInteger,TolMesh,optimState] = initvars(x0,LB,UB,PLB,PUB,optimState,options)
+function [u0,LB,UB,PLB,PUB,MeshSizeInteger,TolMesh,optimState] = initvars(x0,LB,UB,PLB,PUB,optimState,options,prnt)
 %INITVARS Initialize variables and transform coordinates.
 
 nvars = numel(x0);
@@ -97,6 +97,15 @@ if ~isempty(options.PeriodicVars)
         end
     end
 end
+
+% Report variable transformation
+if any(optimState.trinfo.logct) && prnt > 0
+    fprintf('Variables (index) internally transformed to log coordinates: %s.\n',mat2str(find(optimState.trinfo.logct)));
+end
+if any(optimState.periodicvars) && prnt > 0
+    fprintf('Variables (index) defined with periodic boundaries: %s.\n',mat2str(find(optimState.periodicvars)));
+end
+
 
 % Setup covariance information (unused)
 if options.HessianUpdate
