@@ -1,8 +1,15 @@
 function [us,optimState] = searchES(method,sumrule,u,gpstruct,LB,UB,optimState,options)
-%SEARCHES Evolution strategies search
+%SEARCHES Evolution strategies search.
 
 if nargin < 3 || isempty(u) || isempty(gpstruct)
-    us = ['wcm+' num2str(method)];
+    switch method
+        case 1; us = 'ES-cma';
+        case 2; us = 'ES-coord';
+        case 3; us = 'ES-eye';
+        case 4; us = 'ES-cov';
+        case 5; us = 'ES-cma+';
+        otherwise; us = 'ES';
+    end
     return;
 end
 
@@ -22,7 +29,7 @@ if isempty(sumrule); sumrule = 1; end
 
 MeshSize = optimState.meshsize;
 SearchFactor = optimState.searchfactor;
-rotate_gp = isfield(gpstruct,'C') && ~isempty(gpstruct.C);
+rotategp_flag = isfield(gpstruct,'C') && ~isempty(gpstruct.C);
 
 U = gpstruct.x;
 Y = gpstruct.y;
@@ -35,12 +42,12 @@ switch method
         % Small jitter added to each direction
         if method == 1
             jit = MeshSize;
-            active = 0;
+            active_flag = false;
             frac = 0.5;
         else
             % jit = sqrt(optimState.searchmeshsize*MeshSize);
             jit = optimState.searchmeshsize;
-            active = 1;
+            active_flag = true;
             frac = 0.25;
         end
 
@@ -53,11 +60,11 @@ switch method
         % Compute best vectors
         [~,index] = sort(Y,'ascend');
         Ubest = U(index(1:floor(mu)),:);        
-        if active; Uworst = U(index(end:-1:end-floor(mu)+1),:); end
+        if active_flag; Uworst = U(index(end:-1:end-floor(mu)+1),:); end
 
         % Compute weighted covariance matrix wrt u0
         C = ucov(Ubest,u,weights,optimState);
-        if active
+        if active_flag
             negC = ucov(Uworst,u,weights,optimState);
             negmueff = sum(1./weights.^2);            
             negcov = 0.25 * negmueff / ((nvars+2)^1.5 + 2*negmueff);
@@ -80,7 +87,7 @@ switch method
         % Recaled length scale based on gp
         rescaledLenscale = gpstruct.pollscale;
         rescaledLenscale = rescaledLenscale/sqrt(sum(rescaledLenscale.^2));
-        if rotate_gp
+        if rotategp_flag
             sigma = gpstruct.Cinv'*diag(rescaledLenscale);
         else
             sigma = diag(rescaledLenscale);
@@ -114,6 +121,7 @@ scale = options.ESstart;
 us = []; zold = [];
 lambda = optimState.es.lambda;
 
+% Loop over evolutionary strategies iterations
 for i = 1:options.Nsearchiter
     
     % Enforce periodicity
@@ -139,8 +147,8 @@ for i = 1:options.Nsearchiter
             [z,~,~,~,fmu,fs] = feval(options.SearchAcqFcn{:},unew,optimState.ftarget,gpstruct,optimState,0);
         end
     catch
+        % Something went wrong...
         fmu = optimState.ftargetmu;        
-        % Something went wrong     
     end
     
     AcqFun = options.SearchAcqFcn{1};

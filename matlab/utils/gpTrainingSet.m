@@ -1,15 +1,35 @@
-function gpstruct = gpTrainingSet(gpstruct,method,uc,ui,optimState,options,retrain)
-%GPTRAININGSET Define training input set of Gaussian Process
+function gpstruct = gpTrainingSet(gpstruct,method,uc,ui,optimState,options,refit_flag)
+%GPTRAININGSET Update training input set of Gaussian Process.
+%   GPSTRUCT = GPTRAININGSET(GPSTRUCT,'add',UNEW,FVAL,OPTIMSTATE,OPTIONS)
+%   adds point UNEW with function value FVAL to the training set of GP 
+%   structure GPSTRUCT. If OPTIONS.NoiseObj is on, FVAL(1) is the estimated
+%   function value and FVAL(2) the standard deviation of the estimate.
+%   OPTIMSTATE is the optimization structure, and OPTIONS the options
+%   structure.
+%
+%   GPSTRUCT = GPTRAININGSET(GPSTRUCT,METHOD,UC,UI,OPTIMSTATE,OPTIONS)
+%   updates training set of GP structure GPSTRUCT according to method 
+%   METHOD. UC is the current center/incumbent and UI (optional) pivot
+%   vectors used to define the training set. OPTIMSTATE is the optimization 
+%   structure, and OPTIONS the options structure.
+%
+%   GPSTRUCT = GPTRAININGSET(GPSTRUCT,METHOD,UC,UI,OPTIMSTATE,OPTIONS,1)
+%   also refits the GP hyperparameters on the training set.
 
-logindex = 1:optimState.Xmax;
-U = optimState.U(logindex,:);
-Y = optimState.Y(logindex);
-if isfield(optimState,'S'); S = optimState.S(logindex); end
+%   Luigi Acerbi 2016
+
+if nargin < 7 || isempty(refit_flag); refit_flag = false; end
+
+index = 1:optimState.Xmax;
+U = optimState.U(index,:);
+Y = optimState.Y(index);
+if isfield(optimState,'S'); S = optimState.S(index); end
 D = numel(uc);
-rotate_gp = isfield(gpstruct,'C') && ~isempty(gpstruct.C);            
+rotategp_flag = isfield(gpstruct,'C') && ~isempty(gpstruct.C);            
 
-switch(lower(method))
-    case 'add'
+switch (lower(method))
+    
+    case 'add'  % Add a single point to the training set
         if options.FitnessShaping
             ystar = gpstruct.nonlinf(ui(1), gpstruct.nonlinmu, gpstruct.deltay);
         else
@@ -19,306 +39,35 @@ switch(lower(method))
             if options.NoiseObj; ysd = ui(2); else ysd = []; end
             gpstruct.post = update_posterior(gpstruct.hyp(1), gpstruct.mean, ...
                   gpstruct.cov, gpstruct.x, gpstruct.post, uc, ystar);          
-            if rotate_gp; uc = uc*gpstruct.C'; end     
+            if rotategp_flag; uc = uc*gpstruct.C'; end     
             gpstruct.x = [gpstruct.x; uc];
-            gpstruct.y = [gpstruct.y; ystar];
-            if options.NoiseObj; gpstruct.sd = [gpstruct.sd; ysd]; end
+            
+            % Check that the added value is well-defined
+            if isfinite(ystar)
+                gpstruct.y = [gpstruct.y; ystar];
+                if options.NoiseObj; gpstruct.sd = [gpstruct.sd; ysd]; end
+                gpstruct.erry = [gpstruct.erry; false];
+            else
+                [ypenalty,idx] = max(gpstruct.y);
+                gpstruct.y = [gpstruct.y; ypenalty];
+                if options.NoiseObj; gpstruct.sd = [gpstruct.sd; gpstruct.sd(idx)]; end
+                gpstruct.erry = [gpstruct.erry; true];
+            end
+            
         catch
             % Posterior update failed, point was not added
         end
+        
         return;
           
-    case 'local'
-        
-        if isempty(ui)
-            % Distance from the central point
-            if all(gpstruct.lenscale == 1) || ~options.ScaleDistance % Not supported
-                dist = sum(bsxfun(@minus,U,uc).^2,2);
-            else
-                dist = sum(bsxfun(@rdivide,bsxfun(@minus,U,uc),gpstruct.lenscale).^2,2);
-            end
-        else
-            % Distance between vector and set of poll vectors
-            dist = zeros(size(U,1),size(ui,1));
-            if all(gpstruct.lenscale == 1) || ~options.ScaleDistance
-                for i = 1:size(ui,1)
-                    dist(:,i) = sum(bsxfun(@minus,U,ui(i,:)).^2,2);
-                end
-            else
-                for i = 1:size(ui,1)
-                    dist(:,i) = sum(bsxfun(@rdivide,bsxfun(@minus,U,ui(i,:)),gpstruct.lenscale).^2,2);
-                end
-            end
-            dist = min(dist,[],2);
-        end
-        [distord,ord] = sort(dist,'ascend');
-        ntrain = min(optimState.Xmax,options.Ndata);
-        % ntrain = min(ntrain, sum(distord <= 4))
-        
-        if 1
-            index = 1:ntrain;
-        else
-            nclose = find([0;distord/optimState.MeshSize^2] < 1,1,'last') - 1;
-            if nclose > ntrain
-                y = Y(ord(1:nclose));
-                [y,ordy] = sort(y,'ascend');
-                index = ordy(1:options.Ndata);
-            else
-                index = 1:ntrain;
-            end
-        end
-        gpstruct.x = U(ord(index),:);
-        gpstruct.y = Y(ord(index));
-        
-    case 'cluster'
+    case 'grid' % Add points closest to coordinate-wise neighbors
                 
-        if isempty(ui)
-            % Distance from the central point
-            dist = udist(U,uc,gpstruct.lenscale,optimState);
-        else
-            % Distance between vector and set of poll vectors
-            dist = zeros(size(U,1),size(ui,1));
-            for i = 1:size(ui,1)
-                dist(:,i) = udist(U,ui(i,:),gpstruct.lenscale,optimState);
-            end
-            dist = min(dist,[],2);
-        end
-        [distord,ord] = sort(dist,'ascend');
-        
-        % Keep only points within a certain (rescaled) radius from target
-        radius = options.gpRadius*gpstruct.effectiveradius;
-        ntrain = max(options.MinNdata,max(options.Ndata-options.BufferNdata, min(options.Ndata, sum(distord <= radius^2))));
-        ntrain = min(ntrain, optimState.Xmax);
-        % ntrain = max(floor(ntrain/2),min(ntrain, sum(distord <= radius^2)));
-        
-        % sqrt(distord([ntrain-1,ntrain,min(numel(distord),ntrain+1)])')
-        
-        % Cluster observations
-        index = 1:ntrain;
-        
-        if ntrain > options.Ndata && 0
-            % Clustering does not account for periodic data (unused though)
-            index = 1:ceil(min(optimState.Xmax,options.Ndata)/2);
-            gpstruct.x = U(ord(index),:);
-            gpstruct.y = Y(ord(index),:);        
-            
-            index = size(gpstruct.x,1)+1:ntrain;            
-            x = U(ord(index),:);
-            y = Y(ord(index),:);
-            idx = kmeans([x,y],floor(options.Ndata/2));
-            nClusters = max(idx);
-            gpstruct.x = zeros(nClusters,D);
-            gpstruct.y = zeros(nClusters,1);
-            for iCluster = 1:nClusters
-                subset = idx == iCluster;
-                [ymin,pos] = min(y(subset));
-                gpstruct.y(end+1) = ymin;
-                xx = x(subset,:);
-                gpstruct.x(end+1,:) = xx(pos,:); 
-            end
-        end
-        
-        nvars = size(U,2);
-        % Add safeguarded points
-        for d = 1:nvars
-            idx1 = find(U(ord, d) < uc(d), 1);
-            idx2 = find(U(ord, d) > uc(d), 1);
-            index = [index, idx1, idx2];
-        end
-        index = unique(index);
-        nextra = numel(index) - ntrain;
-        % if nextra > 0; nextra, end        
-        
-        gpstruct.x = U(ord(index),:);
-        gpstruct.y = Y(ord(index),:);        
-        
-    case 'clusternew'
-                
-        if isempty(ui)
-            % Distance from the central point
-            dist = udist(U,uc,gpstruct.lenscale,optimState);
-        else
-            % Distance between vector and set of poll vectors
-            dist = zeros(size(U,1),size(ui,1));
-            for i = 1:size(ui,1)
-                dist(:,i) = udist(U,ui(i,:),gpstruct.lenscale,optimState);
-            end
-            dist = min(dist,[],2);
-        end
-        [distord,ord] = sort(dist,'ascend');
-        
-        % The first set only contains nearest-neighbors (up to any distance)
-        n1 = min([options.MinNdata, optimState.Xmax]);
-        
-        % The second set is filled with remaining data up to radius
-        radius = options.gpRadius*gpstruct.effectiveradius;
-        nclose = sum(distord <= radius^2);
-        n2 = min([options.Ndata, nclose, optimState.Xmax]);
-                
-        % Cluster observations        
-        if options.gpCluster && n1 < n2 && n2 < nclose
-            % Clustering does not account for periodic data (unused though)
-            index = 1:n1;            
-            nc = n2 - n1;
-            nfree = nclose - n1;
-            
-            clindex = n1+1:nclose;            
-            x = U(ord(clindex),:);
-            y = Y(ord(clindex),:);
-            idx = kmeans([x,y],nc);
-            nClusters = max(idx);
-            for iCluster = 1:nClusters
-                subset = idx == iCluster;
-                pos = randi(numel(subset));
-                % [~,pos] = min(y(subset));
-                index = [index,n1+subset(pos)];
-            end
-        else
-            index = 1:max(n1,n2);
-        end
-        
-        nvars = size(U,2);
-        % Add safeguarded points
-        for d = 1:nvars
-            idx1 = find(U(ord, d) < uc(d), 1);
-            idx2 = find(U(ord, d) > uc(d), 1);
-            index = [index, idx1, idx2];
-        end
-        index = unique(index);
-        % nextra = numel(index) - ntrain;
-        % if nextra > 0; nextra, end        
-        
-        gpstruct.x = U(ord(index),:);
-        gpstruct.y = Y(ord(index),:);
-        
-        numel(index)
-        
-        
-    case 'clustersafe'
-                
-        if isempty(ui)
-            % Distance from the central point
-            dist = udist(U,uc,gpstruct.lenscale,optimState);
-        else
-            % Distance between vector and set of poll vectors
-            dist = zeros(size(U,1),size(ui,1));
-            for i = 1:size(ui,1)
-                dist(:,i) = udist(U,ui(i,:),gpstruct.lenscale,optimState);
-            end
-            dist = min(dist,[],2);
-        end
-        [distord,ord] = sort(dist,'ascend');
-        
-        if isempty(ui)
-            % Distance from the central point
-            dist2 = udist(U(ord,:),uc,1,optimState);
-        else
-            % Distance between vector and set of poll vectors
-            dist2 = zeros(size(U,1),size(ui,1));
-            for i = 1:size(ui,1)
-                dist2(:,i) = udist(U(ord,:),ui(i,:),1,optimState);
-            end
-            dist2 = min(dist2,[],2);
-        end
-        [distord2,ord2] = sort(dist2,'ascend');
-        
-        % Add closest points according to gp length scale
-        index = 1:min(options.MinNdata,optimState.Xmax);
-        
-        % Add closest points within double mesh scale unit
-        
-        % Keep only points within a certain (rescaled) radius from target
-        radius = 2;
-        nclose = sum(distord2 <= radius^2);
-        extra = setdiff(ord2(1:nclose), index)';
-        index = [index, extra(1:min(end,options.BufferNdata))];
-        ntrain = numel(index);
-                        
-        nvars = size(U,2);
-        % Add safeguarded points
-        for d = 1:nvars
-            idx1 = find(U(ord, d) < uc(d), 1);
-            idx2 = find(U(ord, d) > uc(d), 1);
-            index = [index, idx1, idx2];
-        end
-        index = unique(index);
-        nextra = numel(index) - ntrain;
-        if nextra > 0; nextra, end
-        
-        gpstruct.x = U(ord(index),:);
-        gpstruct.y = Y(ord(index),:);        
-        
-    case 'clusterextra'
-                
-        if isempty(ui)
-            % Distance from the central point
-            dist = udist(U,uc,gpstruct.lenscale,optimState);
-        else
-            % Distance between vector and set of poll vectors
-            dist = zeros(size(U,1),size(ui,1));
-            for i = 1:size(ui,1)
-                dist(:,i) = udist(U,ui(i,:),gpstruct.lenscale,optimState);
-            end
-            dist = min(dist,[],2);
-        end
-        [distord,ord] = sort(dist,'ascend');
-        
-        % Keep only points within a certain (rescaled) radius from target
-        nmin = options.Ndata - options.BufferNdata;
-        nmax = min(options.Ndata,optimState.Xmax); 
-        radius = 4*gpstruct.effectiveradius;
-        nclose = sum(distord <= radius^2);
-        
-        % [nmin nmax nclose optimState.Xmax]
-        
-        if optimState.Xmax <= nmin || ((nclose - nmin) <= options.BufferNdata)
-            index = 1:nmax;
-            gpstruct.x = U(ord(index),:);
-            gpstruct.y = Y(ord(index),:);            
-        else            
-            index = 1:nmin;
-            gpstruct.x = U(ord(index),:);
-            gpstruct.y = Y(ord(index),:);        
-                                    
-            index = size(gpstruct.x,1)+1:nclose;            
-            xc = U(ord(index),:);
-            yc = Y(ord(index),:);
-                        
-            if 0
-                %idx = kmeans([xc,yc],options.BufferNdata);
-                % Periodic variables are not fully supported for clustering
-                idx = kmeans(bsxfun(@rdivide,xc,gpstruct.lenscale),options.BufferNdata);
-                nClusters = max(idx);
-                for iCluster = 1:nClusters
-                    subset = (idx == iCluster);
-                    xx = xc(subset,:);
-                    yy = yc(subset);
-                    if 0
-                        [~,pos] = min(yy);
-                    else
-                        pos = randi(numel(yy));
-                    end
-                    gpstruct.y(end+1) = yy(pos);
-                    gpstruct.x(end+1,:) = xx(pos,:); 
-                end
-            else
-                idx = randperm(size(xc,1));
-                gpstruct.x = [gpstruct.x; xc(idx(1:options.BufferNdata),:)];
-                gpstruct.y = [gpstruct.y; yc(idx(1:options.BufferNdata))];
-            end
-            
-        end
-        
-    case 'grid'
-                
-        % GP-based vector scaling
+        % Add coordinate-wise neighbors to the reference set
         vv = eye(D);
         %vv = grammSchmidt(randn(D,1))';
         vv = [vv; -vv];        
-        % vv = [vv; 0.5*vv; 0.25*vv; -0.25*vv; -0.5*vv; -vv];
         
-        if options.HessianUpdate
-            % vv = vv;
+        if options.HessianUpdate    % Unsupported
             Bnew = vv*optimState.C';
             % Global vector normalization
             M = sqrt(sum(Bnew(1:D,:).*Bnew(1:D,:),2));
@@ -329,16 +78,12 @@ switch(lower(method))
         else
             vv = bsxfun(@times,vv*optimState.meshsize,optimState.scale.*gpstruct.pollscale);
         end
-        %xc = origunits(uc,optimState);
-        %xg = periodCheck(bsxfun(@plus,xc,vv),optimState.LB,optimState.UB,optimState,0);
-        %xg = xCheck(xg,optimState.LB,optimState.UB,options.TolMesh,optimState,0);
-        %ug = [uc; gridunits(xg,optimState)];
 
         ug = periodCheck(bsxfun(@plus,uc,vv),optimState.LB,optimState.UB,optimState);
         ug = uCheck(ug,options.TolMesh,optimState,1);
         ug = [uc; ug];
                 
-        % Distance between vector and set of poll vectors
+        % Distance between vector and set of reference vectors
         dist = zeros(size(U,1),size(ug,1));
         for i = 1:size(ug,1)
             dist(:,i) = udist(U,ug(i,:),gpstruct.lenscale,optimState);
@@ -359,7 +104,7 @@ switch(lower(method))
                 
         % sqrt(distord([ntrain-1,ntrain,min(numel(distord),ntrain+1)])')
         
-        % Cluster observations
+        % Take points closest to reference points
         index = 1:ntrain;
         
         % Add closest point
@@ -381,6 +126,7 @@ switch(lower(method))
         gpstruct.y = Y(ord(index),:);
         if isfield(optimState,'S'); gpstruct.sd = S(ord(index),:); end
         
+    %----------------------------------------------------------------------    
     case 'covgrid'
         
         if ~options.HessianUpdate
@@ -545,6 +291,7 @@ switch(lower(method))
         end
         
         gpstruct.y = gpstruct.y(:);
+    %----------------------------------------------------------------------
 end
 
 % Transformation of objective function
@@ -553,29 +300,24 @@ if options.FitnessShaping
         fitnessTransform(gpstruct.y);
 end
 
-% Check for infinities
-erry = ~isfinite(gpstruct.y);
-if any(erry)
-    ygood = gpstruct.y(~erry);
-    ypenalty = max(ygood);
-    gpstruct.y(erry) = ypenalty;
+% Substitute ill-defined function values with highest value in set
+err_index = ~isfinite(gpstruct.y);
+if any(err_index)
+    [ypenalty,idx1] = max(gpstruct.y(~err_index));
+    idx_values = find(~error_index);
+    gpstruct.y(err_index) = ypenalty;
+    if isfield(optimState,'S'); gpstruct.sd(err_index) = gpstruct.sd(idx_values(idx1)); end
 end
 
-if strcmpi(method,'add')
-    gpstruct.erry = gpstruct.erry | erry;
-else
-    gpstruct.erry = erry;
-end
-
+% List of 'erroneous' points
+gpstruct.erry = err_index;
 
 % Store test points
 gpstruct.xi = ui;
 
-% Update gp definitions
-gplik = [];
-gpstruct.x0 = [];
-if rotate_gp && ~strcmpi(method,'add') && ~strcmpi(method,'neighborhood')  % Rotate dataset
-    if retrain
+% Rotate dataset (unsupported)
+if rotategp_flag && ~strcmpi(method,'add') && ~strcmpi(method,'neighborhood')
+    if refit_flag
         if isfield(gpstruct,'Cinv')
             Cinvold = gpstruct.Cinv;
         else
@@ -596,10 +338,14 @@ if rotate_gp && ~strcmpi(method,'add') && ~strcmpi(method,'neighborhood')  % Rot
     end
     gpstruct.x = gpstruct.x*gpstruct.C';
 end
+
+% Update GP definitions
+gplik = [];
+gpstruct.x0 = [];
 gpstruct = feval(options.gpdefFcn{:},D,gplik,optimState,options,gpstruct);
 
-% Re-fit Gaussian process (optimize or sample)
-if retrain
+% Re-fit Gaussian process (optimize or sample -- only optimization supported)
+if refit_flag
     
     gpstruct = gpfit(gpstruct,options.gpSamples,options);
     
@@ -614,26 +360,26 @@ if retrain
         gpstruct.lenscale = 1;
     end
     
-    % gp-based geometric length scale
+    % GP-based geometric length scale
     ll = options.gpRescalePoll*gpstruct.hyp.cov((1:D)+gpstruct.ncovoffset);
     ll = exp(ll - mean(ll))';
     ll = min(max(ll, optimState.searchmeshsize), (optimState.UB-optimState.LB)./optimState.scale); 
     gpstruct.pollscale = ll;
     
-    % gp effective covariance length scale radius
+    % GP effective covariance length scale radius
     if options.UseEffectiveRadius
         switch lower(gpstruct.covtype)
             case 'rq'
                 alpha = exp(gpstruct.hyp.cov(end));
                 gpstruct.effectiveradius = sqrt(alpha*(exp(1/alpha)-1));                
             case 'matern1'
-                gpstruct.effectiveradius = 1/sqrt(2);                                   
+                gpstruct.effectiveradius = 1/sqrt(2);
             case 'matern3'
                 % gpstruct.effectiveradius = fzero(@(x)(1+sqrt(3)*x)*exp(-sqrt(3)*x)-exp(-1),1)/sqrt(2);
-                gpstruct.effectiveradius = 0.876179713323485;               
+                gpstruct.effectiveradius = 0.876179713323485;
             case 'matern5'
                 % gpstruct.effectiveradius = fzero(@(x)(1+sqrt(5)*x+5/3*x^2)*exp(-sqrt(5)*x)-exp(-1),1)/sqrt(2);
-                gpstruct.effectiveradius = 0.918524648109253;               
+                gpstruct.effectiveradius = 0.918524648109253;
             otherwise
                 gpstruct.effectiveradius = 1;
         end
@@ -690,7 +436,7 @@ if Nsamples == 0
     
     % Conditions for performing a second fit
     secondfit = options.DoubleRefit || highNoise || lowMean;
-        
+    
     if secondfit
         hrnd = gppriorrnd(gpstruct.prior,gpstruct.hyp);
         hrnd = 0.5*(unwrap(hrnd) + unwrap(gpstruct.hyp));
@@ -701,15 +447,15 @@ if Nsamples == 0
     optoptions = optimset('TolFun',0.1,'TolX',1e-4,'MaxFunEval',150);
     % optoptions.Hessian = 'user-supplied';
     
-    % Remove errors
+    % Remove undefined points
     if isfield(gpstruct,'erry') && sum(gpstruct.erry) > 0 && 0
         gpopt = gpstruct;
         gpopt.x(gpstruct.erry,:) = [];
         gpopt.y(gpstruct.erry) = [];
-        size(gpopt.x,1)
+        if isfield(gpopt.sd); gpopt.sd(gpstruct.erry) = []; end
     else
         gpopt = gpstruct;
-    end        
+    end
     
     hyp = gpHyperOptimize(hyp0,gpopt,options.OptimToolbox,optoptions,options.NoiseNudge,options.RemovePointsAfterTries);     
     hypw = 1;
@@ -721,13 +467,13 @@ gpstruct.hyp = hyp;
 gpstruct.hypweights = hypw;         % Update samples weigths
 
 % Laplace approximation at MAP solution
-if Nsamples == 0 && gpstruct.marginalize
-    try
-        [~,~,~,~,~,gpstruct.hypHessian] = feval(gpstruct.inf{:},gpstruct.hyp,gpstruct.mean,gpstruct.cov,gpstruct.lik,gpstruct.x,gpstruct.y);
-    catch
-        gpstruct.hypHessian = [];
-    end
-end
+% if Nsamples == 0 && gpstruct.marginalize
+%     try
+%         [~,~,~,~,~,gpstruct.hypHessian] = feval(gpstruct.inf{:},gpstruct.hyp,gpstruct.mean,gpstruct.cov,gpstruct.lik,gpstruct.x,gpstruct.y);
+%     catch
+%         gpstruct.hypHessian = [];
+%     end
+% end
 
 %[exp(gpstruct.hyp.cov(:))', exp(gpstruct.hyp.lik)]
 %gpstruct.hyp.mean

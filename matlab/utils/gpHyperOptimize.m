@@ -173,7 +173,7 @@ for iRun = 1:numel(hyp0)
     end
     
     if ~success
-        warning(['Failed optimization of hyper-parameters (' num2str(nTry) ' attempts).']);
+        warning(['Failed optimization of hyper-parameters (' num2str(nTry) ' attempts). GP approximation might be unreliable.']);
         
         if 0
             x1(:,:,1) = gpstruct.x;

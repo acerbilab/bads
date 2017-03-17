@@ -1238,7 +1238,7 @@ end
 function add2path()
 %ADD2PATH Adds BADS subfolders to MATLAB path.
 
-subfolders = {'acq','gpdef','gpml_fast','init','poll','search','utils','warp'};
+subfolders = {'acq','gpdef','gpml_fast','init','poll','search','utils','warp','gpml-matlab-v3.6-2015-07-07'};
 pathCell = regexp(path, pathsep, 'split');
 baseFolder = fileparts(mfilename('fullpath'));
 

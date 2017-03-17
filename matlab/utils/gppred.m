@@ -11,8 +11,8 @@ Nhyp = numel(gpstruct.hyp);     % Number of hyper-parameter samples
 compute_grad = nargout > 5;
 
 % Rotate test input?
-rotate_gp = isfield(gpstruct,'C') && ~isempty(gpstruct.C); 
-if rotate_gp
+rotategp_flag = isfield(gpstruct,'C') && ~isempty(gpstruct.C); 
+if rotategp_flag
     xi = xi*gpstruct.C';
 end
 

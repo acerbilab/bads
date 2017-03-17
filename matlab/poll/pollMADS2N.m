@@ -1,5 +1,5 @@
 function Bnew = pollMADS2N(B,x,gpstruct,LB,UB,optimState,options)
-%POLLMADS2N Poll 2N fixed basis vectors (Generalized Pattern Search).
+%POLLMADS2N Poll 2N random basis vectors (mesh-adaptive direct search).
 
 nvars = numel(x);
 
