@@ -155,3 +155,27 @@ if ~isempty(options.FunValues)
     end    
     
 end
+
+%% Initialize OPTIMSTATE variables
+
+optimState.searchfactor =   1;
+optimState.sdlevel      = options.IncumbentSigmaMultiplier;
+optimState.searchcount  = options.SearchNtry;       % Skip search at first iteration
+optimState.lastreeval   = -Inf;                     % Last time function values were re-evaluated
+optimState.lastfitgp    = -Inf;                     % Last fcn evaluation for which the gp was trained
+
+% List of points at the end of each iteration
+optimState.iterList.u = [];
+optimState.iterList.fval = [];
+optimState.iterList.fsd = [];
+optimState.iterList.fhyp = [];
+
+% Create vector of ES weights (only for searchES)
+es_iter = options.Nsearchiter;
+es_mu = options.Nsearch/es_iter;
+es_lambda = es_mu;
+optimState.es = ESupdate(es_mu,es_lambda,es_iter);
+
+% Hedge struct
+optimState.hedge = [];
+

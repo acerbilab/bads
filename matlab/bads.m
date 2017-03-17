@@ -21,9 +21,9 @@ function [x,fval,exitflag,output,funValues,gpstruct] = bads(fun,x0,LB,UB,PLB,PUB
 %   X = BADS(FUN,X0,LB,UB,PLB,PUB) specifies a set of plausible lower and
 %   upper bounds such that LB <= PLB <= X0 <= PUB <= UB. Both PLB and PUB
 %   need to be finite. PLB and PUB are used to design the initial mesh of 
-%   the pattern search, and represent a plausible range for the 
+%   the direct search, and represent a plausible range for the 
 %   optimization variables. As a rule of thumb, set PLB and PUB such that 
-%   there is ~ 95% probability that the minimum is found within the box 
+%   there is > 90% probability that the minimum is found within the box 
 %   (where in doubt, just set PLB=LB and PUB=UB).
 %
 %   X = BADS(FUN,X0,LB,UB,PLB,PUB,options) minimizes with the default 
@@ -31,20 +31,32 @@ function [x,fval,exitflag,output,funValues,gpstruct] = bads(fun,x0,LB,UB,PLB,PUB
 %   BPS('defaults') returns the default OPTIONS struct.
 %
 %   [X,FVAL] = BADS(...) returns FVAL, the value of the objective function 
-%   FUN at the solution X.
+%   FUN at the solution X. If the target function is stochastic, FVAL is
+%   the expected mean of the function value at X.
 %
 %   [X,FVAL,EXITFLAG] = BADS(...) returns EXITFLAG which describes the exit 
 %   condition of BADS. Possible values of EXITFLAG and the corresponding 
-%   exit conditions are
+%   exit conditions are:
 %
 %     0  Maximum number of function evaluations or iterations reached.
+%     1  Magnitude of mesh size is less than specified tolerance.
+%     2  Change in estimated function value less than the specified tolerance 
+%        for OPTIONS.TolStallIters iterations.
 %
 %   [X,FVAL,EXITFLAG,OUTPUT] = BADS(...) returns a structure OUTPUT with the
 %   following information:
-%   [...] to be written [...]
-%
-%   [...]
-%
+%          function: <Objective function name>
+%       problemtype: <Type of problem> (unconstrained or bound constrained)
+%        iterations: <Total iterations>
+%         funccount: <Total function evaluations>
+%          meshsize: <Mesh size at X>
+%          rngstate: <Status of random number generator>
+%         algorithm: <Bayesian adaptive direct search>
+%           message: <BADS termination message>
+%              fval: <Expected mean of function value at X>
+%               fsd: <Estimated standard deviation of function value at X>
+%        optimstate: <Optimization detailed structure>
+
 %   Author: Luigi Acerbi
 %   Release date: Mar 14, 2017
 %   Version: 0.7-alpha -- INTERNAL USE ONLY, DO NOT DISTRIBUTE
@@ -97,7 +109,9 @@ defopts.ForcingExponent         = '3/2                  % Exponent of forcing fu
 %defopts.PollMeshMultiplier      = '2                    % Mesh multiplicative factor between iterations';
 defopts.PollMeshMultiplier      = '4                    % Mesh multiplicative factor between iterations';
 defopts.IncumbentSigmaMultiplier = '0.1                 % Multiplier to incumbent uncertainty for acquisition functions';
-options.ImprovementQuantile     = '0.5                  % Quantile when computing improvement (<0.5 for conservative improvement)';
+defopts.ImprovementQuantile     = '0.5                  % Quantile when computing improvement (<0.5 for conservative improvement)';
+defopts.FinalQuantile           = '1e-3                 % Top quantile when choosing final iteration';
+
 defopts.AlternativeIncumbent    = 'off                  % Use alternative incumbent offset';
 defopts.AdaptiveIncumbentShift  = 'off                  % Adaptive multiplier to incumbent uncertainty';
 defopts.NonlinearScaling        = 'on                   % Allow nonlinear rescaling of variables if deemed useful';
@@ -183,7 +197,7 @@ defopts.TrueMinX                = '[]                   % Location of the global
 
 
 %% If called with no arguments or with 'defaults', return default options
-if nargin < 1 || strcmpi(fun, 'defaults')
+if nargin < 1 || strcmpi(fun,'defaults')
     if nargin < 1
         fprintf('Default options returned (type "help bads" for help).\n');
     end
@@ -249,15 +263,6 @@ options = initoptions(nvars,defopts,options);
 options.TolMesh = TolMesh;
     
 optimState = updateSearchBounds(optimState);
-optimState.searchfactor = 1;
-optimState.sdlevel = options.IncumbentSigmaMultiplier;
-optimState.searchcount = options.SearchNtry;    % Skip search at first iteration
-
-% Create vector of ES weights (only for searchES)
-es_iter = options.Nsearchiter;
-es_mu = options.Nsearch/es_iter;
-es_lambda = es_mu;
-optimState.es = ESupdate(es_mu,es_lambda,es_iter);
 
 % Store objective function
 if ischar(fun); fun = str2func(fun); end
@@ -291,6 +296,8 @@ end
 % Evaluate starting point and initial mesh
 [u,fval,isFinished_flag,optimState] = ...
     initmesh(u0,funwrapper,SkipInitPoint,optimState,options,prnt,displayFormat);
+exitflag = 0;
+msg = 'Optimization terminated: reached maximum number of function evaluations after initialization.';
     
 if options.UncertaintyHandling  % Current uncertainty in estimate
     fsd = options.NoiseSize(1);
@@ -313,15 +320,7 @@ fhyp = gpstruct.hyp;
 % Initialize struct with GP prediction statistics
 optimState.gpstats = savegpstats([],[],[],[],ones(1,max(1,options.gpSamples)));
 
-% List of points at the end of each iteration
-optimState.iterList.u = [];
-optimState.iterList.fval = [];
-optimState.iterList.fsd = [];
-optimState.iterList.fhyp = [];
-
-optimState.lastfitgp = -Inf;    % Last fcn evaluation for which the gp was trained
 lastskipped = 0;                % Last skipped iteration
-optimState.hedge = [];
 
 SearchSuccesses = 0;
 SearchSpree = 0;
@@ -883,16 +882,30 @@ while ~isFinished_flag
     end
     
     fhyp = gpstruct.hyp;        % GP hyperparameters at end of iteration
-    
+        
     % Check termination conditions
-    if MeshSize < options.TolMesh; isFinished_flag = true; end
-    if optimState.funccount >= options.MaxFunEvals; isFinished_flag = true; end
-    if iter >= options.MaxIter; isFinished_flag = true; end
+    if optimState.funccount >= options.MaxFunEvals
+        isFinished_flag = true;
+        exitflag = 0;
+        msg = 'Optimization terminated: reached maximum number of iterations OPTIONS.MaxIter.';
+    end
+    if iter >= options.MaxIter
+        isFinished_flag = true;
+        exitflag = 0;
+        msg = 'Optimization terminated: reached maximum number of function evaluations OPTIONS.MaxFunEvals.';
+    end
+    if MeshSize < options.TolMesh
+        isFinished_flag = true;
+        exitflag = 1;
+        msg = 'Optimization terminated: mesh size less than OPTIONS.TolMesh.';
+    end
     if iter > options.TolStallIters        
         HistoricImprovement = ...
             EvalImprovement(optimState.iterList.fval(iter-options.TolStallIters),fval,optimState.iterList.fsd(iter-options.TolStallIters),fsd,options.ImprovementQuantile);
         if HistoricImprovement < options.TolFun
             isFinished_flag = true;
+            exitflag = 2;
+            msg = 'Optimization terminated: change in the function value less than OPTIONS.TolFun.';
         end
     end
         
@@ -929,7 +942,7 @@ while ~isFinished_flag
     end
     
     if isFinished_flag
-        % Multiple starts
+        % Multiple starts (deprecated)
         if Restarts > 0 && optimState.funccount < options.MaxFunEvals
             isFinished_flag = false;
             MeshSizeInteger = 0;
@@ -942,57 +955,54 @@ while ~isFinished_flag
 
 end
 
-x = origunits(u,optimState);    % Convert back to original space
-exitflag = 0;
-output.FuncCount = optimState.funccount;
-output.IterCount = iter;
-output.optimState = optimState;
-
-% Return function evaluation struct (can be reused in future runs)
-if nargout > 4
-    [~,funValues] = funlogger(funwrapper,u,optimState,'done');
-end
-
 % Re-evaluate all best points (skip first iteration)
-if options.UncertaintyHandling && iter > 1
-    
+if options.UncertaintyHandling && iter > 1    
     optimState = reevaluateIterList(optimState,gpstruct,options);
         
-    if 0
-        % Order by probability of being minimum
-        Nsamples = 1e4;
-        y = bsxfun(@plus, optimState.iterList.fval(2:end), ...
-            bsxfun(@times,optimState.iterList.fsd(2:end),randn(iter-1,Nsamples)));
-        [~,winner] = min(y,[],1);
-        winner = winner + 1;
+    % Order by lowest probabilistic upper bound and choose best iterate
+    SigmaMultiplier = sqrt(2).*erfcinv(2*options.FinalQuantile);
+    y = optimState.iterList.fval + SigmaMultiplier*optimState.iterList.fsd;
+    [~,index] = min(y);
 
-        % Compute exceedance probability (probability of being best value)
-        xp = zeros(1,iter);
-        for i = 2:iter; xp(i) = sum(winner == i); end
-        xp = xp/sum(xp);
-
-        [~,index] = max(xp);        
-    else
-        % Order by lowest probabilistic upper bound
-        y = optimState.iterList.fval + 3*optimState.iterList.fsd;
-        [~,index] = min(y);        
-    end
-
+    % Best iterate
     fval = optimState.iterList.fval(index);
     fsd = optimState.iterList.fsd(index);
     u = optimState.iterList.u(index,:);
-    x = origunits(u,optimState);
-    
-    if options.Debug
-        optimState.iterList.u
-        [optimState.iterList.fval, optimState.iterList.fsd]
-    end
-    
 end
 
-% Return mean and SD of the estimated function value at the optimum
-output.fval = fval;
-output.fsd = fsd;
+% Convert back to original space
+x = origunits(u,optimState);
+
+% Print final message
+if prnt > 1
+    fprintf('\n%s\n\n', msg);
+end
+
+if nargout > 3
+    output.function = func2str(fun);
+    if all(isinf(LB)) && all(isinf(UB))
+        output.problemtype = 'unconstrained';
+    else
+        output.problemtype = 'boundconstraints';        
+    end    
+    output.iterations = iter;
+    output.funccount = optimState.funccount;
+    output.meshsize = optimState.meshsize;
+    output.rngstate = rng;
+    output.algorithm = 'Bayesian adaptive direct search';
+    output.message = msg;
+    
+    % Return mean and SD of the estimated function value at the optimum
+    output.fval = fval;
+    output.fsd = fsd;
+    
+    output.optimstate = optimState;
+    
+    % Return function evaluation struct (can be reused in future runs)
+    if nargout > 4
+        [~,funValues] = funlogger(funwrapper,u,optimState,'done');
+    end    
+end
 
 
 end
@@ -1334,9 +1344,12 @@ end
 
 %--------------------------------------------------------------------------
 function optimState = reevaluateIterList(optimState,gpstruct,options)
-%REEVALUATEITERLIST Re-evaluate function values at stored locations
+%REEVALUATEITERLIST Re-evaluate function values at stored locations.
 
 iter = optimState.iter;
+
+% Return if no change since last re-evaluation
+if optimState.lastreeval == optimState.funccount; return; end
 
 for index = 1:iter
     gpstruct.hyp = optimState.iterList.hyp{index};
@@ -1358,6 +1371,8 @@ for index = 1:iter
     optimState.iterList.fval(index) = fval;
     optimState.iterList.fsd(index) = fsd;
 end
+
+optimState.lastreeval = optimState.funccount;
 
 end
 
