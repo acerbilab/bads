@@ -809,7 +809,7 @@ while ~isFinished_flag
             if options.AccelerateMesh && iter > options.AccelerateMeshSteps
                 % Evaluate improvement in the last iterations
                 HistoricImprovement = ...
-                    EvalImprovement(optimState.iterList.fval(iter-options.AccelerateMeshSteps),fval,optimState.iterList.fsd(iter-options.AccelerateMeshSteps),fvalsd,options.ImprovementQuantile);
+                    EvalImprovement(optimState.iterList.fval(iter-options.AccelerateMeshSteps),fval,optimState.iterList.fsd(iter-options.AccelerateMeshSteps),fsd,options.ImprovementQuantile);
                 if HistoricImprovement < options.TolFun
                     MeshSizeInteger = MeshSizeInteger - 1;
                 end
@@ -890,7 +890,7 @@ while ~isFinished_flag
     if iter >= options.MaxIter; isFinished_flag = true; end
     if iter > options.TolStallIters        
         HistoricImprovement = ...
-            EvalImprovement(optimState.iterList.fval(iter-options.TolStallIters),fval,optimState.iterList.fsd(iter-options.TolStallIters),fvalsd,options.ImprovementQuantile);
+            EvalImprovement(optimState.iterList.fval(iter-options.TolStallIters),fval,optimState.iterList.fsd(iter-options.TolStallIters),fsd,options.ImprovementQuantile);
         if HistoricImprovement < options.TolFun
             isFinished_flag = true;
         end
@@ -908,15 +908,23 @@ while ~isFinished_flag
     if DoPollStep_flag && options.UncertaintyHandling                        
         if iter > 1
             optimState = reevaluateIterList(optimState,gpstruct,options);
+            
+            % Update estimates of incumbent
+            fval = optimState.iterList.fval(iter);
+            fsd = optimState.iterList.fsd(iter);
+            fhyp = optimState.iterList.hyp{iter};
 
-            % Pick best estimate        
-            y = optimState.iterList.fval;
-            [~,index] = min(y);
+            % Recompute improvement for all iterations
+            ReImprovementList = EvalImprovement(fval,optimState.iterList.fval,fsd,optimState.iterList.fsd,options.ImprovementQuantile);
+            [ReImprovement,index] = max(ReImprovementList);
 
-            fval = optimState.iterList.fval(index);
-            fsd = optimState.iterList.fsd(index);
-            u = optimState.iterList.u(index,:);
-            fhyp = optimState.iterList.hyp{index};        
+            % Check if any point got better
+            if ReImprovement > options.TolFun
+                fval = optimState.iterList.fval(index);
+                fsd = optimState.iterList.fsd(index);
+                u = optimState.iterList.u(index,:);
+                fhyp = optimState.iterList.hyp{index};
+            end
         end
     end
     
@@ -1063,7 +1071,7 @@ else
         error('Quantile Q for robust improvement should be greater than 0 and less than 1.');
     end
     mu = fbase - fnew;
-    sigma = sqrt(sbase^2 + snew^2);    
+    sigma = sqrt(sbase.^2 + snew.^2);    
     x0 = -sqrt(2).*erfcinv(2*q);
     z = sigma.*x0 + mu;
 end
