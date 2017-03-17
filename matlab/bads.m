@@ -56,7 +56,6 @@ function [x,fval,exitflag,output,funValues,gpstruct] = bads(fun,x0,LB,UB,PLB,PUB
 %
 % TO DO:
 % - check options.FunValues provided as argument
-% - check fvalhistory
 % - play around with OPTIONS.ImprovementQuantile
 % - added retrain at first search step (is it necessary?)
 % - removed added point at the end of poll stage (was it necessary?)
@@ -290,7 +289,7 @@ else
 end
 
 % Evaluate starting point and initial mesh
-[u,fval,isFinished,optimState] = ...
+[u,fval,isFinished_flag,optimState] = ...
     initmesh(u0,funwrapper,SkipInitPoint,optimState,options,prnt,displayFormat);
     
 if options.UncertaintyHandling  % Current uncertainty in estimate
@@ -310,8 +309,6 @@ if options.FitLik; gplik = []; else gplik = log(options.TolFun); end
 gpstruct = feval(options.gpdefFcn{:},nvars,gplik,optimState,options,[]);
 gpstruct.fun = funwrapper;
 fhyp = gpstruct.hyp;
-
-fvalhistory = Inf(min(1000,options.MaxIter),1);
 
 % Initialize struct with GP prediction statistics
 optimState.gpstats = savegpstats([],[],[],[],ones(1,max(1,options.gpSamples)));
@@ -333,7 +330,7 @@ Restarts = options.Restarts;
 %% Optimization loop
 iter = 1;
 
-while ~isFinished
+while ~isFinished_flag
     optimState.iter = iter;
     refitted_flag = false;  % GP refitted this iteration
     action = [];            % Action performed this iteration (for printing purposes)
@@ -790,9 +787,12 @@ while ~isFinished
         % Evaluate poll
         if (PollBestImprovement > 0 && options.SloppyImprovement) || ...
                 PollBestImprovement > SufficientImprovement
-            polldirection = find(abs(upollbest - ubest) > 1e-12,1); % The sign might be wrong for periodic variables (unused anyhow)            
+            polldirection = find(abs(upollbest - ubest) > 1e-12,1); % The sign can be wrong for periodic variables (unused anyhow)            
             [ubest,fval,fsd,optimState,gpstruct] = UpdateIncumbent(ubest,fval,fsd,upollbest,fpollbest,fpollbestsd,optimState,gpstruct,options);
             u = ubest;
+            pollmoved_flag = true;
+        else
+            pollmoved_flag = false;
         end
 
         if PollBestImprovement > SufficientImprovement
@@ -803,11 +803,16 @@ while ~isFinished
             optimState.fsuccess = [optimState.fsuccess; fval];
         else
             % Failed poll, decrease mesh size
-            if options.AccelerateMesh && iter > options.AccelerateMeshSteps && ...
-                fvalhistory(iter-options.AccelerateMeshSteps) - fval < options.TolFun
-                MeshSizeInteger = MeshSizeInteger - 2;
-            else
-                MeshSizeInteger = MeshSizeInteger - 1;
+            MeshSizeInteger = MeshSizeInteger - 1;
+            
+            % Accelerated mesh reduction if stalling
+            if options.AccelerateMesh && iter > options.AccelerateMeshSteps
+                % Evaluate improvement in the last iterations
+                HistoricImprovement = ...
+                    EvalImprovement(optimState.iterList.fval(iter-options.AccelerateMeshSteps),fval,optimState.iterList.fsd(iter-options.AccelerateMeshSteps),fvalsd,options.ImprovementQuantile);
+                if HistoricImprovement < options.TolFun
+                    MeshSizeInteger = MeshSizeInteger - 1;
+                end
             end            
             
             optimState.SearchSizeInteger = min(optimState.SearchSizeInteger, MeshSizeInteger*options.SearchGridMultiplier - options.SearchGridNumber);
@@ -866,8 +871,8 @@ while ~isFinished
         
     end % Poll stage
 
-    % Moved during the poll stage
-    if goodpoll_flag; gpstruct.post = []; end    
+    % Moved during the poll stage, need to retrain the GP
+    if pollmoved_flag; gpstruct.post = []; end    
     
     %----------------------------------------------------------------------
     %% Finalize iteration
@@ -876,24 +881,23 @@ while ~isFinished
     if strcmpi(options.Plot,'scatter')
         scatterplot(iter,ubest,fval,action,gpstruct,optimState,options);
     end
-        
-    if MeshSize < options.TolMesh
-        isFinished = 1;
-    end
-                        
-    fvalhistory(iter) = fval;
-    fhyp = gpstruct.hyp;
+    
+    fhyp = gpstruct.hyp;        % GP hyperparameters at end of iteration
     
     % Check termination conditions
-    if optimState.funccount >= options.MaxFunEvals; isFinished = 1; end
-    if iter >= options.MaxIter; isFinished = 1; end
-    if iter > options.TolStallIters && ...
-            fvalhistory(iter-options.TolStallIters) - fval < options.TolFun
-        isFinished = 1;
+    if MeshSize < options.TolMesh; isFinished_flag = true; end
+    if optimState.funccount >= options.MaxFunEvals; isFinished_flag = true; end
+    if iter >= options.MaxIter; isFinished_flag = true; end
+    if iter > options.TolStallIters        
+        HistoricImprovement = ...
+            EvalImprovement(optimState.iterList.fval(iter-options.TolStallIters),fval,optimState.iterList.fsd(iter-options.TolStallIters),fvalsd,options.ImprovementQuantile);
+        if HistoricImprovement < options.TolFun
+            isFinished_flag = true;
+        end
     end
         
-    % Store best points at the end of each iteration
-    if DoPollStep_flag || isFinished
+    % Store best points at the end of each iteration, or upon termination
+    if DoPollStep_flag || isFinished_flag
         optimState.iterList.u(iter,:) = u;
         optimState.iterList.fval(iter,1) = fval;
         optimState.iterList.fsd(iter,1) = fsd;
@@ -916,10 +920,10 @@ while ~isFinished
         end
     end
     
-    if isFinished
+    if isFinished_flag
+        % Multiple starts
         if Restarts > 0 && optimState.funccount < options.MaxFunEvals
-            fvalhistory(1:iter-1) = Inf;
-            isFinished = 0;
+            isFinished_flag = false;
             MeshSizeInteger = 0;
             Restarts = Restarts - 1;
         end
