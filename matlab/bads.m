@@ -1,4 +1,4 @@
-function [x,fval,exitflag,output,funValues,gpstruct] = bads(fun,x0,LB,UB,PLB,PUB,options,varargin)
+function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PUB,options,varargin)
 %BADS Constrained optimization using Bayesian Adaptive Direct Search
 %   BADS attempts to solve problems of the form:
 %       min F(X)  subject to:  LB <= X <= UB
@@ -47,6 +47,7 @@ function [x,fval,exitflag,output,funValues,gpstruct] = bads(fun,x0,LB,UB,PLB,PUB
 %   following information:
 %          function: <Objective function name>
 %       problemtype: <Type of problem> (unconstrained or bound constrained)
+%        targettype: <Type of target function> (deterministic or stochastic)
 %        iterations: <Total iterations>
 %         funccount: <Total function evaluations>
 %          meshsize: <Mesh size at X>
@@ -55,7 +56,13 @@ function [x,fval,exitflag,output,funValues,gpstruct] = bads(fun,x0,LB,UB,PLB,PUB
 %           message: <BADS termination message>
 %              fval: <Expected mean of function value at X>
 %               fsd: <Estimated standard deviation of function value at X>
-%        optimstate: <Optimization detailed structure>
+%
+%   [X,FVAL,EXITFLAG,OUTPUT,OPTIMSTATE] = BADS(...) returns a detailed
+%   optimization structure OPTIMSTATE.
+%
+%   [X,FVAL,EXITFLAG,OUTPUT,OPTIMSTATE,GPSTRUCT] = BADS(...) returns the
+%   Gaussian Process structure GPSTRUCT.
+%
 
 %   Author: Luigi Acerbi
 %   Release date: Mar 14, 2017
@@ -979,7 +986,12 @@ if prnt > 1
 end
 
 if nargout > 3
-    output.function = func2str(fun);
+    output.function = func2str(fun);    
+    if options.UncertaintyHandling
+        output.targettype = 'deterministic';
+    else    
+        output.targettype = 'stochastic';
+    end    
     if all(isinf(LB)) && all(isinf(UB))
         output.problemtype = 'unconstrained';
     else
@@ -995,18 +1007,14 @@ if nargout > 3
     % Return mean and SD of the estimated function value at the optimum
     output.fval = fval;
     output.fsd = fsd;
-    
-    output.optimstate = optimState;
-    
-    % Return function evaluation struct (can be reused in future runs)
+            
+    % Return optimization struct (can be reused in future runs)
     if nargout > 4
-        [~,funValues] = funlogger(funwrapper,u,optimState,'done');
+        [~,optimState] = funlogger(funwrapper,u,optimState,'done');
     end    
 end
 
-
 end
-
 
 %--------------------------------------------------------------------------
 function gpstats = savegpstats(gpstats,fval,ymu,ys,hypw)
