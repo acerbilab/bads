@@ -18,5 +18,6 @@ Bayesian Adaptive Direct Search - developer's version
 - If you simply type `bads` you will get a default OPTIONS struct.
    - These are the OPTIONS you might *sometimes* want to play with (but in general you will be okay with the defaults). 
    - There are other hidden options which are not recommended for the user to modify.
-- **BADS for noisy problems:** You need to set `OPTIONS.UncertaintyHandling = 1` and `OPTIONS.NoiseSize = sigma`, where `sigma` is an estimate of the SD of the noise in your problem (it is not limited to this value).
+- **BADS for noisy problems:** You need to set `OPTIONS.UncertaintyHandling = 1` and `OPTIONS.NoiseSize = sigma`. 
+   - `sigma` is an estimate of the SD of the noise in your problem (it is not limited to this value).
    - The noise handling part still under testing and improvement.
