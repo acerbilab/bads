@@ -65,14 +65,10 @@ function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PU
 %
 
 %   Author: Luigi Acerbi
-%   Release date: Mar 14, 2017
-%   Version: 0.7-alpha -- INTERNAL USE ONLY, DO NOT DISTRIBUTE
+%   Release date: Mar 18, 2017
+%   Version: 0.9
+%   Website: https://github.com/lacerbi/bads
 
-
-%
-% LAST CHANGES: 
-% gpTrainingSet:         - uCheck set to projection = 1 line 334
-%
 % TO DO:
 % - check options.FunValues provided as argument
 % - play around with OPTIONS.ImprovementQuantile
