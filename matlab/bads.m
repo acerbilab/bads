@@ -84,7 +84,6 @@ function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PU
 % - testa se la search Hedge è ancora necessaria?
 % - aggiungi warning se la mesh cerca di espandere oltre MaxPollGridNumber
 %   (sintomo di misspecification dei bound)
-% - in private, functions che iniziano con init si confondono con initSorbole
 
 
 %% Default options
@@ -261,12 +260,12 @@ end
 nvars = numel(x0);
 optimState = [];
 
-% Initialize algorithm options
-options = initoptions(nvars,defopts,options);    
+% Setup algorithm options
+options = setupoptions(nvars,defopts,options);    
 
-% Initalize and transform variables
+% Setup and transform variables
 [u0,LB,UB,PLB,PUB,MeshSizeInteger,TolMesh,optimState] = ...
-    initvars(x0,LB,UB,PLB,PUB,optimState,options,prnt);
+    setupvars(x0,LB,UB,PLB,PUB,optimState,options,prnt);
 options.TolMesh = TolMesh;
     
 optimState = updateSearchBounds(optimState);
@@ -302,7 +301,7 @@ end
 
 % Evaluate starting point and initial mesh
 [u,fval,isFinished_flag,optimState] = ...
-    initmesh(u0,funwrapper,SkipInitPoint,optimState,options,prnt,displayFormat);
+    evalinitmesh(u0,funwrapper,SkipInitPoint,optimState,options,prnt,displayFormat);
 exitflag = 0;
 msg = 'Optimization terminated: reached maximum number of function evaluations after initialization.';
     

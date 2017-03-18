@@ -1,4 +1,4 @@
-function [u0,LB,UB,PLB,PUB,MeshSizeInteger,TolMesh,optimState] = initvars(x0,LB,UB,PLB,PUB,optimState,options,prnt)
+function [u0,LB,UB,PLB,PUB,MeshSizeInteger,TolMesh,optimState] = setupvars(x0,LB,UB,PLB,PUB,optimState,options,prnt)
 %INITVARS Initialize variables and transform coordinates.
 
 nvars = numel(x0);

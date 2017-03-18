@@ -1,4 +1,4 @@
-function options = initoptions(nvars,defopts,options)
+function options = setupoptions(nvars,defopts,options)
 %INITOPTIONS Initialize OPTIONS struct.
 
 % Assign default values to OPTIONS struct

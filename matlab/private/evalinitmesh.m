@@ -1,5 +1,5 @@
-function [u,fval,isFinished,optimState] = initmesh(u0,funwrapper,SkipInitPoint,optimState,options,prnt,displayFormat)
-%INITMESH Evaluate initial mesh.
+function [u,fval,isFinished,optimState] = evalinitmesh(u0,funwrapper,SkipInitPoint,optimState,options,prnt,displayFormat)
+%EVALINITMESH Evaluate initial mesh.
 
 LB = optimState.LB;
 UB = optimState.UB;
