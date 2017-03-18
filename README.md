@@ -4,7 +4,7 @@ Bayesian Adaptive Direct Search - developer's version
 
 ### Installation instructions
 
-- To install BADS, just unpack the zipped directory where you want to put it and run the script `install.m`.
+- To install BADS, just clone or unpack the zipped repository where you want it and run the script `install.m`.
    - This will add the BADS base folder to the MATLAB search path.
    - No need to install other toolboxes.
    - BADS automatically handles the rest at runtime.
