@@ -64,6 +64,13 @@ function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PU
 %   Gaussian Process structure GPSTRUCT.
 %
 %   OPTIONS = BADS('defaults') returns a basic default OPTIONS structure.
+%
+%   Optimization of noisy functions:
+%   To run BADS on a noisy (stochastic) objective function, set
+%       OPTIONS.UncertaintyHandling = 1
+%       OPTIONS.NoiseSize = SIGMA
+%   where SIGMA is an estimate of the SD of the noise in your problem. 
+%   (If not specified, default SIGMA = 1).
 
 %   Author: Luigi Acerbi
 %   Release date: Mar 18, 2017
