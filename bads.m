@@ -63,6 +63,7 @@ function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PU
 %   [X,FVAL,EXITFLAG,OUTPUT,OPTIMSTATE,GPSTRUCT] = BADS(...) returns the
 %   Gaussian Process structure GPSTRUCT.
 %
+%   OPTIONS = BADS('defaults') returns a basic default OPTIONS structure.
 
 %   Author: Luigi Acerbi
 %   Release date: Mar 18, 2017
@@ -82,15 +83,36 @@ function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PU
 %   (sintomo di misspecification dei bound)
 
 
-%% Default options
+%% Basic default options
 
-defopts.Display                 = 'iter                 % Level of display ("iter", "notify", "final", or "off")';
+defopts.Display                 = 'iter         % Level of display ("iter", "notify", "final", or "off")';
+defopts.MaxIter                 = '200*nvars    % Max number of iterations';
+defopts.MaxFunEvals             = '500*nvars    % Max number of objective fcn evaluations';
+defopts.FunValues               = '[]           % Struct with pregress fcn evaluations (X and Y fields)';
+defopts.PeriodicVars            = '[]           % Array with indices of periodic variables';
+defopts.NonlinearScaling        = 'on           % Automatic nonlinear rescaling of variables';
+defopts.CompletePoll            = 'off          % Complete polling around the current iterate';
+defopts.AccelerateMesh          = 'on           % Accelerate mesh contraction';
+defopts.UncertaintyHandling     = 'off          % Explicit handling of noise';
+defopts.NoiseObj                = 'off          % Objective fcn returns noise value as 2nd argument (unsupported)';
+defopts.NoiseSize               = '[]           % Base observation noise magnitude';
+defopts.OptimToolbox            = '[]           % Use Optimization Toolbox (if empty, determine at runtime)';
+
+%% If called with no arguments or with 'defaults', return default options
+if nargin < 1 || strcmpi(fun,'defaults')
+    if nargin < 1
+        fprintf('Basic default options returned (type "help bads" for help).\n');
+    end
+    x = defopts;
+    return;
+end
+
+%% Advanced options (do not modify unless you know what you are doing)
+
 defopts.Plot                    = 'off                  % Show optimization plots ("profile", "scatter", or "off")';
 defopts.Debug                   = 'off                  % Debug mode, plot additional info';
 
 % Termination conditions
-defopts.MaxIter                 = '200*nvars            % Max number of iterations';
-defopts.MaxFunEvals             = '500*nvars            % Max number of objective fcn evaluations';
 defopts.TolMesh                 = '1e-6                 % Tolerance on mesh size';
 defopts.TolFun                  = '1e-3                 % Min significant change of objective fcn';
 defopts.TolStallIters           = '4 + floor(nvars/2)   % Max iterations with no significant change (doubled under uncertainty)';
@@ -102,9 +124,7 @@ defopts.PollMethod              = '@pollMADS2N          % Poll function';
 defopts.Nbasis                  = '200*nvars';
 
 defopts.Restarts                = '0                    % Number of restart attempts';
-defopts.CacheSize               = '1e4                  % Size of cache';
-defopts.FunValues               = '[]                   % Struct with pregress fcn evaluations';
-defopts.PeriodicVars            = '[]                   % Array with indices of periodic variables';
+defopts.CacheSize               = '1e4                  % Size of cache for storing function evaluations';
 
 defopts.TolImprovement          = '1                    % Minimum significant improvement at unit mesh size';
 defopts.ForcingExponent         = '3/2                  % Exponent of forcing function';
@@ -116,11 +136,9 @@ defopts.FinalQuantile           = '1e-3                 % Top quantile when choo
 
 defopts.AlternativeIncumbent    = 'off                  % Use alternative incumbent offset';
 defopts.AdaptiveIncumbentShift  = 'off                  % Adaptive multiplier to incumbent uncertainty';
-defopts.NonlinearScaling        = 'on                   % Allow nonlinear rescaling of variables if deemed useful';
 defopts.gpRescalePoll           = '1                    % GP-based geometric scaling factor of poll vectors';
 defopts.FitnessShaping          = 'off                  % Nonlinear rescaling of objective fcn';
 defopts.WarpFunc                = '0                    % GP warping function type';
-defopts.OptimToolbox            = '[]                   % Use MATLAB Optimization Toolbox (if empty, determine at runtime)';
 
 % Search properties
 defopts.Nsearch                 = '2^12                 % Number of candidate search points';
@@ -171,20 +189,15 @@ defopts.CholAttempts            = '0                    % Attempts at performing
 defopts.NoiseNudge              = '[1 0]                % Increase nudge to noise in case of Cholesky failure';
 defopts.RemovePointsAfterTries  = '1                    % Start removing training points after this number of failures';
 
-defopts.UncertaintyHandling     = 'off                  % Explicit handling of noise';
-defopts.NoiseObj                = 'off                  % Objective function returns estimated noise value as second argument';
 defopts.UncertainIncumbent      = 'yes                  % Treat incumbent as if uncertain regardless of uncertainty handling';
-defopts.NoiseSize               = 'sqrt(options.TolFun) % Base observation noise magnitude';
 defopts.MeshNoiseMultiplier     = '0.5                  % Contribution to log noise magnitude from log mesh size (0 for noisy functions)';
 defopts.TolPoI                  = '1e-6/nvars           % Threshold probability of improvement (PoI); set to 0 to always complete polling';
 defopts.SkipPoll                = 'yes                  % Skip polling if PoI below threshold, even with no success';
 defopts.ConsecutiveSkipping     = 'yes                  % Allow consecutive incomplete polls';
 defopts.SkipPollAfterSearch     = 'yes                  % Skip polling after successful search';
-defopts.CompletePoll            = 'off                  % Complete polling around the current iterate';
 % defopts.MinFailedPollSteps      = 'ceil(sqrt(nvars))    % Number of failed fcn evaluations before skipping is allowed';
 defopts.MinFailedPollSteps      = 'Inf                  % Number of failed fcn evaluations before skipping is allowed';
 defopts.NormAlphaLevel          = '1e-6                 % Alpha level for normality test of gp predictions';
-defopts.AccelerateMesh          = 'on                   % Accelerate mesh contraction';
 defopts.AccelerateMeshSteps     = '3                    % Accelerate mesh after this number of stalled iterations';
 defopts.SloppyImprovement       = 'yes                  % Move incumbent even after insufficient improvement';
 defopts.HessianUpdate           = 'no                   % Update Hessian as you go';
@@ -198,11 +211,8 @@ defopts.HedgeDecay              = '0.1^(1/(2*nvars))';
 defopts.TrueMinX                = '[]                   % Location of the global minimum (for visualization only)';
 
 
-%% If called with no arguments or with 'defaults', return default options
-if nargin < 1 || strcmpi(fun,'defaults')
-    if nargin < 1
-        fprintf('Default options returned (type "help bads" for help).\n');
-    end
+%% If called with 'all', return all default options
+if strcmpi(fun,'all')
     x = defopts;
     return;
 end

@@ -128,8 +128,7 @@ if ~isempty(options.FunValues)
         error('bads:funValues', ...
             'The ''FunValues'' field in OPTIONS needs to have a X and a Y field (respectively, inputs and their function values).');
     end
-    
-    
+        
     X = options.FunValues.X;
     Y = options.FunValues.Y;
     if size(X,1) ~= size(Y,1)

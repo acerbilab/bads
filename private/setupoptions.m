@@ -66,6 +66,9 @@ if options.UncertaintyHandling
     %options.gpMeanPercentile = 50;
     options.MinFailedPollSteps = Inf;
     options.MeshNoiseMultiplier = 0;
+    if isempty(options.NoiseSize); options.NoiseSize = 1; end
+else
+    if isempty(options.NoiseSize); options.NoiseSize = sqrt(options.TolFun); end
 end
 
 % Check if MATLAB's Optimization Toolbox™ is available
