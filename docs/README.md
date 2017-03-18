@@ -16,7 +16,7 @@ BADS follows a mesh adaptive direct search (MADS) procedure [2] that alternates 
 - In the **poll** phase, points are evaluated on a (random) mesh by taking steps in one direction at a time, until an improvement is found or all directions have been tried. The step size is doubled in case of success, halved otherwise. 
 - In the **search** step, a Gaussian process (GP) is fit to a (local) subset of the points evaluated so far. Points to evaluate during search are iteratively chosen by maximizing the *Expected Improvement* w.r.t. the current optimum [3,4].
 
-**Fig 1: BADS procedure** ![BADS procedure](https://github.com/lacerbi/bads/blob/master/figures/fig1-demo.png "Fig 1: BADS procedure")
+**Fig 1: BADS procedure** ![BADS procedure](https://github.com/lacerbi/bads-dev/blob/master/docs/figures/fig1-demo.png "Fig 1: BADS procedure")
 
 Adherence to the MADS framework guarrantees convergence to a (local) stationary point of a noiseless function under general conditions [1]. The basic scheme is enhanced with heuristics to accelerate the poll step, to update the GP hyper-parameters, to generate a good set of candidate points in the search step, and to deal robustly with noisy functions.
 
@@ -36,12 +36,12 @@ We consider a run *successful* if the best achieved function value is within `ep
 
 ## Results
 
-**Fig 2: Performance on artificial test functions** ![Fig 2: Performance on artificial test functions](https://github.com/lacerbi/bads/blob/master/figures/fig2-demo.png "Fig 2: Performance on artificial test functions")
+**Fig 2: Performance on artificial test functions** ![Fig 2: Performance on artificial test functions](https://github.com/lacerbi/bads-dev/blob/master/docs/figures/fig2-demo.png "Fig 2: Performance on artificial test functions")
 
 **A:** Noiseless *cec14* testbed. Plots of fraction of successful runs (`eps` < 0.1) as a function of number of function evaluations per number of dimensions, for different algorithms. Each panel contains a subset of test functions. *Left column*: Low-dimensional functions with `D = 2,3,5` (left). *Right column*: Medium-dimensional functions with `D = 10,20` (right). *Top row*: Smooth functions (sphere, ellipsoid, rotated ellipsoid and Rosenbrock). *Bottom row*: Non-smooth functions (step, Ackley, Griewank, Rastrigin). 
 **B:** Fraction of successful runs (`eps` < 1) on the *cec14-noisy* testbed with additive Gaussian noise. BADS performs on par with or outperforms the best algorithms in each class (`fmincon` and MCS on smooth, noiseless problems; CMA-ES and MCS on non-smooth or noisy problems).
 
-**Fig 3: Performance on behavioral model-fitting problems** ![Fig 3: Performance on behavioral model-fitting problems](https://github.com/lacerbi/bads/blob/master/figures/fig3-demo.png "Fig 3: Performance on behavioral model-fitting problems")
+**Fig 3: Performance on behavioral model-fitting problems** ![Fig 3: Performance on behavioral model-fitting problems](https://github.com/lacerbi/bads-dev/blob/master/docs/figures/fig3-demo.png "Fig 3: Performance on behavioral model-fitting problems")
 
 **A:** Maximization of noiseless log-likelihood functions of behavioral models; fraction of problems solved (see **Fig 2** for the legend). *Left panel*: Localization task modelled with location-dependent sensory noise (*loc*; 5 pairs of representative models and real datasets). *Right panel*: Perceptual causal inference task modelled with stimulus-dependent noise (*causalinf*; 5 models/real datasets). This problem is hard due to nested numerical integrations that yield a jagged log-likelihood landscape (for this we set a target tolerance of `eps` < 1, as per noisy problems).
 **B:** Maximization of log-likelihood functions obtained through stochastic simulation (noisy); estimated fraction of problems solved after `500 * D` function evaluations. *Left panel*: Visual short-term memory change localization task (*change*; 5 synthetic datasets from meaningful parameter settings; `D = 2`). This problem is hard due to shallow log-likelihood landscapes with relatively high noise. *Right panel*: Bayesian model of a word-recognition memory task (*wrm*; 4 synthetic datasets; `D = 4`). 
