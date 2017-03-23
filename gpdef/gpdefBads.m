@@ -90,7 +90,8 @@ if isempty(gpstruct)
     end
 
     % Prior and bounds on covariance length scale(s)
-    covrange = (optimState.PUB - optimState.PLB)./optimState.scale;
+    covrange = (optimState.UB - optimState.LB)./optimState.scale;
+    % Maximum length scale (normalized units, with PLB=-1 and PUB=1)
     covrange = min(100, 10*covrange);
     for i = 1:gpstruct.ncovlen
         % Wide prior on (log) normalized length scale 
