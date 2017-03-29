@@ -1,4 +1,4 @@
-function [u,fval,isFinished,optimState] = evalinitmesh(u0,funwrapper,SkipInitPoint,optimState,options,prnt,displayFormat)
+function [u,fval,isFinished,optimState,displayFormat] = evalinitmesh(u0,funwrapper,SkipInitPoint,optimState,options,prnt)
 %EVALINITMESH Evaluate initial mesh.
 
 LB = optimState.LB;
@@ -18,6 +18,19 @@ else
     fval = Inf;
 end
 optimState.fval = fval;
+
+% Display format depends whether the objective is noisy
+if prnt > 2
+    if options.UncertaintyHandling
+        displayFormat = ' %5.0f       %5.0f    %12.6g    %12.6g    %12.6g    %20s    %s\n';
+        fprintf(' Iteration    f-count      E[f(x)]        SD[f(x)]      MeshScale          Method          Actions\n');
+    else
+        displayFormat = ' %5.0f       %5.0f    %12.6g    %12.6g    %20s    %s\n';
+        fprintf(' Iteration    f-count          f(x)          MeshScale          Method          Actions\n');
+    end
+else
+    displayFormat = [];
+end
 
 if prnt > 2 && ~SkipInitPoint
     if options.UncertaintyHandling

@@ -140,6 +140,7 @@ defopts.PollMeshMultiplier      = '2                    % Mesh multiplicative fa
 defopts.IncumbentSigmaMultiplier = '0.1                 % Multiplier to incumbent uncertainty for acquisition functions';
 defopts.ImprovementQuantile     = '0.5                  % Quantile when computing improvement (<0.5 for conservative improvement)';
 defopts.FinalQuantile           = '1e-3                 % Top quantile when choosing final iteration';
+defopts.ForcePollMesh           = 'no                   % Force poll vectors to be on mesh';
 
 defopts.AlternativeIncumbent    = 'off                  % Use alternative incumbent offset';
 defopts.AdaptiveIncumbentShift  = 'off                  % Adaptive multiplier to incumbent uncertainty';
@@ -299,21 +300,9 @@ end
 iter = 0;
 optimState.iter = iter;
 
-if prnt > 2
-    if options.UncertaintyHandling
-        displayFormat = ' %5.0f       %5.0f    %12.6g    %12.6g    %12.6g    %20s    %s\n';
-        fprintf(' Iteration    f-count      E[f(x)]        SD[f(x)]      MeshScale          Method          Actions\n');
-    else
-        displayFormat = ' %5.0f       %5.0f    %12.6g    %12.6g    %20s    %s\n';
-        fprintf(' Iteration    f-count          f(x)          MeshScale          Method          Actions\n');
-    end
-else
-    displayFormat = [];
-end
-
 % Evaluate starting point and initial mesh
-[u,fval,isFinished_flag,optimState] = ...
-    evalinitmesh(u0,funwrapper,SkipInitPoint,optimState,options,prnt,displayFormat);
+[u,fval,isFinished_flag,optimState,displayFormat] = ...
+    evalinitmesh(u0,funwrapper,SkipInitPoint,optimState,options,prnt);
 exitflag = 0;
 msg = 'Optimization terminated: reached maximum number of function evaluations after initialization.';
     
@@ -672,6 +661,9 @@ while ~isFinished_flag
                 % Add vector to current point, fix to grid
                 upollnew = bsxfun(@plus,u,vv);
                 upollnew = periodCheck(upollnew,LB,UB,optimState);
+                if options.ForcePollMesh
+                    upollnew = force2grid(upollnew, optimState);
+                end
                 upollnew = uCheck(upollnew,options.TolMesh,optimState,0);
                 
                 % Add new poll points to polling set
