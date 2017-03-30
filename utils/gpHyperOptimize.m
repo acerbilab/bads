@@ -1,5 +1,5 @@
 function hyp = gpHyperOptimize(hyp0,gpstruct,optimtoolbox,options,nudge,removeafter)
-%GPHYPEROPTIMIZE Optimize Gaussian Process hyperparameters
+%GPHYPEROPTIMIZE Optimize Gaussian Process hyperparameters.
       
 if nargin < 3; optimtoolbox = 1; end
 if nargin < 4; options = []; end
@@ -143,7 +143,7 @@ for iRun = 1:numel(hyp0)
             end
             
             % Retry with random sample from prior        
-            theta0 = unwrap(gppriorrnd(gpstruct.prior,gpstruct.hyp));
+            theta0 = unwrap(gppriorrnd(gpstruct.prior,gpstruct.hyp(1)));
             
             % Mean parameter
             %mu = median(gpstruct.y);
@@ -188,9 +188,9 @@ for iRun = 1:numel(hyp0)
 end
 
 [~,index] = min(fval);
-newtheta = unwrap(gpstruct.hyp);
+newtheta = unwrap(gpstruct.hyp(1));
 newtheta(~fixed) = theta(:,index);
-hyp = rewrap(gpstruct.hyp, newtheta);
+hyp = rewrap(gpstruct.hyp(1), newtheta);
 
 % exp(hyp.cov(1:size(gpstruct.x,2)))'
 %hyp.cov(:)'
@@ -272,9 +272,9 @@ end
 function [nlZ, dnlZ, HnlZ] = gp_optimizer(theta, fixed, gpstruct)
 %GP_OPTIMIZER Wrapper function for GP optimization
 
-newtheta = unwrap(gpstruct.hyp);
+newtheta = unwrap(gpstruct.hyp(1));
 newtheta(~fixed) = theta;
-thetastruct = rewrap(gpstruct.hyp, newtheta);
+thetastruct = rewrap(gpstruct.hyp(1), newtheta);
 
 f = @() (feval(gpstruct.inf{:}, thetastruct, gpstruct.mean, gpstruct.cov, gpstruct.lik, gpstruct.x, gpstruct.y));
 

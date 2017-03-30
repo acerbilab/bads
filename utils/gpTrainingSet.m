@@ -348,21 +348,24 @@ gpstruct = feval(options.gpdefFcn{:},D,gplik,optimState,options,gpstruct);
 if refit_flag
     
     gpstruct = gpfit(gpstruct,options.gpSamples,options);
+    Nsamples = numel(gpstruct.hyp);
     
     % Gaussian process length scale
     if gpstruct.ncovlen > 1
         gpstruct.lenscale = zeros(1,D);
-        for i = 1:numel(gpstruct.hyp)
-            gpstruct.lenscale = gpstruct.lenscale + gpstruct.hypweight(i)*exp(gpstruct.hyp.cov(gpstruct.ncovoffset+(1:D)))';
+        for i = 1:Nsamples
+            gpstruct.lenscale = gpstruct.lenscale + gpstruct.hypweight(i)*exp(gpstruct.hyp(i).cov(gpstruct.ncovoffset+(1:D)))';
         end
-        gpstruct.lenscale = gpstruct.lenscale/numel(gpstruct.hyp);
     else
         gpstruct.lenscale = 1;
     end
     
     % GP-based geometric length scale
-    ll = options.gpRescalePoll*gpstruct.hyp.cov((1:D)+gpstruct.ncovoffset);
-    ll = exp(ll - mean(ll))';
+    ll = zeros(D,Nsamples);
+    for i = 1:Nsamples
+        ll(:,i) = options.gpRescalePoll*gpstruct.hyp(i).cov((1:D)+gpstruct.ncovoffset);
+    end    
+    ll = exp(sum(bsxfun(@times, gpstruct.hypweight, ll - mean(ll(:))),2))';
     ll = min(max(ll, optimState.searchmeshsize), (optimState.UB-optimState.LB)./optimState.scale); 
     gpstruct.pollscale = ll;
     
@@ -370,7 +373,9 @@ if refit_flag
     if options.UseEffectiveRadius
         switch lower(gpstruct.covtype)
             case 'rq'
-                alpha = exp(gpstruct.hyp.cov(end));
+                alpha = zeros(1,Nsamples);
+                for i = 1:Nsamples; alpha(i) = exp(gpstruct.hyp(i).cov(end)); end
+                alpha = sum(gpstruct.hypweight.*alpha);
                 gpstruct.effectiveradius = sqrt(alpha*(exp(1/alpha)-1));                
             case 'matern1'
                 gpstruct.effectiveradius = 1/sqrt(2);
@@ -387,17 +392,20 @@ if refit_flag
     
     % Gaussian process signal variability
     gpstruct.sf = 0;
-    for i = 1:numel(gpstruct.hyp)
-        gpstruct.sf = gpstruct.sf + gpstruct.hypweight(i)*exp(gpstruct.hyp.cov(gpstruct.ncovoffset+D+1));
+    for i = 1:Nsamples
+        gpstruct.sf = gpstruct.sf + gpstruct.hypweight(i)*exp(gpstruct.hyp(i).cov(gpstruct.ncovoffset+D+1));
     end
-    gpstruct.sf = gpstruct.sf/numel(gpstruct.hyp);
     
     % [std(gpstruct.y) gpstruct.sf gpstruct.hyp.lik(1) exp(gpstruct.hyp.lik(2:end)')]
 end
 
 try
     % Recompute posterior
-    [~,~,~,~,~,gpstruct.post] = mygp(gpstruct.hyp,gpstruct.inf,gpstruct.mean,gpstruct.cov,gpstruct.lik,gpstruct.x,gpstruct.y,uc(1,:));
+    Nsamples = numel(gpstruct.hyp);    
+    [~,~,~,~,~,gpstruct.post] = mygp(gpstruct.hyp(1),gpstruct.inf,gpstruct.mean,gpstruct.cov,gpstruct.lik,gpstruct.x,gpstruct.y,uc(1,:));    
+    for i = 2:Nsamples
+        [~,~,~,~,~,gpstruct.post(i)] = mygp(gpstruct.hyp(i),gpstruct.inf,gpstruct.mean,gpstruct.cov,gpstruct.lik,gpstruct.x,gpstruct.y,uc(1,:));
+    end
 catch
     % Posterior update failed
     gpstruct.post = [];
@@ -420,51 +428,54 @@ else
     ub = Inf;
 end
 
-% Initial point #1 is old hyperparameter value
-hyp0(1) = gpstruct.hyp;
+% First find MAP
 
-if Nsamples == 0
-    % Initial point #2 is avg of random draw from prior and #1
-    
-    % Check for possible high-noise mode
-    if numel(options.NoiseSize) == 1 || ~isfinite(options.NoiseSize(2)); noise = 1; 
-    else noise = options.NoiseSize(2); end    
-    highNoise = hyp0(1).lik(1) > (log(options.NoiseSize(1)) + 2*noise);
-    
-    % Check for mean stuck below minimum
-    lowMean = hyp0(1).mean(1) < min(gpstruct.y);
-    
-    % Conditions for performing a second fit
-    secondfit = options.DoubleRefit || highNoise || lowMean;
-    
-    if secondfit
-        hrnd = gppriorrnd(gpstruct.prior,gpstruct.hyp);
-        hrnd = 0.5*(unwrap(hrnd) + unwrap(gpstruct.hyp));
-        if highNoise; hrnd(end-1) = randn()-2; end   % Retry with low noise magnitude
-        if lowMean; hrnd(end) = median(gpstruct.y); end % Retry with mean from median
-        hyp0(2) = rewrap(gpstruct.hyp,min(max(hrnd,lb),ub));
-    end
-    optoptions = optimset('TolFun',0.1,'TolX',1e-4,'MaxFunEval',150);
-    % optoptions.Hessian = 'user-supplied';
-    
-    % Remove undefined points
-    if isfield(gpstruct,'erry') && sum(gpstruct.erry) > 0 && 0
-        gpopt = gpstruct;
-        gpopt.x(gpstruct.erry,:) = [];
-        gpopt.y(gpstruct.erry) = [];
-        if isfield(gpopt.sd); gpopt.sd(gpstruct.erry) = []; end
-    else
-        gpopt = gpstruct;
-    end
-    
-    hyp = gpHyperOptimize(hyp0,gpopt,options.OptimToolbox,optoptions,options.NoiseNudge,options.RemovePointsAfterTries);     
-    hypw = 1;
+% Initial point #1 is old hyperparameter value (randomly picked)
+hyp0(1) = gpstruct.hyp(randi(numel(gpstruct.hyp)));
+
+% Initial point #2 is avg of random draw from prior and #1
+
+% Check for possible high-noise mode
+if numel(options.NoiseSize) == 1 || ~isfinite(options.NoiseSize(2)); noise = 1; 
+else noise = options.NoiseSize(2); end    
+highNoise = hyp0(1).lik(1) > (log(options.NoiseSize(1)) + 2*noise);
+
+% Check for mean stuck below minimum
+lowMean = hyp0(1).mean(1) < min(gpstruct.y);
+
+% Conditions for performing a second fit
+secondfit = options.DoubleRefit || highNoise || lowMean;
+
+if secondfit
+    hrnd = gppriorrnd(gpstruct.prior,gpstruct.hyp(1));
+    hrnd = 0.5*(unwrap(hrnd) + unwrap(gpstruct.hyp(1)));
+    if highNoise; hrnd(end-1) = randn()-2; end   % Retry with low noise magnitude
+    if lowMean; hrnd(end) = median(gpstruct.y); end % Retry with mean from median
+    hyp0(2) = rewrap(gpstruct.hyp(1),min(max(hrnd,lb),ub));
+end
+optoptions = optimset('TolFun',0.1,'TolX',1e-4,'MaxFunEval',150);
+% optoptions.Hessian = 'user-supplied';
+
+% Remove undefined points
+if isfield(gpstruct,'erry') && sum(gpstruct.erry) > 0 && 0
+    gpopt = gpstruct;
+    gpopt.x(gpstruct.erry,:) = [];
+    gpopt.y(gpstruct.erry) = [];
+    if isfield(gpopt.sd); gpopt.sd(gpstruct.erry) = []; end
 else
-    [hyp,hypw] = gpHyperSample(hyp0,gpstruct);
+    gpopt = gpstruct;
+end
+
+hyp = gpHyperOptimize(hyp0,gpopt,options.OptimToolbox,optoptions,options.NoiseNudge,options.RemovePointsAfterTries);     
+hypw = 1;
+
+% If using multiple samples, do SVGD from neighborhood of the MAP
+if Nsamples > 1
+    [hyp,hypw] = gpHyperSVGD(hyp,gpstruct,options);    
 end
 
 gpstruct.hyp = hyp;
-gpstruct.hypweights = hypw;         % Update samples weigths
+gpstruct.hypweight = hypw;         % Update samples weigths
 
 % Laplace approximation at MAP solution
 % if Nsamples == 0 && gpstruct.marginalize

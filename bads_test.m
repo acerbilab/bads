@@ -17,6 +17,7 @@ fun = @(x) sum((x./(1:numel(x)).^2).^2);     % Objective function
 
 options = bads('defaults');             % Default options
 options.Ninit = 2;                      % Only 2 points for initial mesh
+options.gpSamples = 10;                  
 %options.UncertaintyHandling = 0;        % Deterministic function (determined at runtime if not specified)
 %options.Plot = 'profile';               % Show profile during optimization
 
@@ -37,6 +38,8 @@ options.Ninit = 2;                      % Only 2 points for initial mesh
 %options.Plot = 'profile';              % Show profile during optimization
 %options.UncertaintyHandling = 1;        % Activate noise handling (determined at runtime if not specified)
 options.NoiseSize = 1;                  % Estimated noise magnitude
+options.gpSamples = 10;                  
+
 
 rng(0);
 [x,fval,exitflag,output,funValues,gpstruct] = bads(fun,x0,LB,UB,PLB,PUB,options);

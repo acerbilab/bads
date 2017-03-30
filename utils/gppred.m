@@ -36,10 +36,15 @@ else
     % Compute prediction for each sample
     for iSample = 1:Nhyp        
         hyp = gpstruct.hyp(iSample);
+        if isfield(gpstruct,'post') && ~isempty(gpstruct.post) && (numel(gpstruct.post) >= iSample)
+            post = gpstruct.post(iSample);
+        else
+            post = [];
+        end
         
         try
             [ymu(iSample,:),ys2(iSample,:),fmu(iSample,:),fs2(iSample,:)] = ...
-                gppred1(X,xi,gpstruct,hyp);
+                gppred1(X,xi,gpstruct,hyp,post);
                 
             if isfield(gpstruct,'hypweight') && ~isempty(gpstruct.hypweight)
                 hypw(iSample) = gpstruct.hypweight(iSample);
@@ -57,7 +62,7 @@ hypw = hypw./sum(isfinite(hypw(:)));    % Normalize samples
 end
 
 %GPPRED1 gp prediction for a single hyper-parameter sample
-function [ymui,ys2i,fmui,fs2i] = gppred1(X,xi,gpstruct,hyp)
+function [ymui,ys2i,fmui,fs2i] = gppred1(X,xi,gpstruct,hyp,post)
 
     if isfield(gpstruct,'marginalize') && gpstruct.marginalize ... % Marginalized GP
             && isfield(gpstruct,'hypHessian') && ~isempty(gpstruct.hypHessian) 
@@ -66,17 +71,17 @@ function [ymui,ys2i,fmui,fs2i] = gppred1(X,xi,gpstruct,hyp)
             hyp.Sigma_inv = gpstruct.hypHessian;
         %end
         
-        if isfield(gpstruct,'post') && ~isempty(gpstruct.post)    
+        if ~isempty(post)    
             [ymui,ys2i,fmui,fs2i] = mgp(hyp,gpstruct.inf,gpstruct.mean,gpstruct.cov, ...
-        gpstruct.lik,X,gpstruct.post,xi);
+        gpstruct.lik,X,post,xi);
         else
             [ymui,ys2i,fmui,fs2i] = mgp(hyp,gpstruct.inf,gpstruct.mean,gpstruct.cov, ...
         gpstruct.lik,X,gpstruct.y,xi);
         end
     else
-        if isfield(gpstruct,'post') && ~isempty(gpstruct.post)
+        if ~isempty(post)
             [ymui,ys2i,fmui,fs2i] = mygp(hyp,gpstruct.inf,gpstruct.mean,gpstruct.cov, ...
-        gpstruct.lik,X,gpstruct.post,xi);
+        gpstruct.lik,X,post,xi);
         else
             [ymui,ys2i,fmui,fs2i] = mygp(hyp,gpstruct.inf,gpstruct.mean,gpstruct.cov, ...
         gpstruct.lik,X,gpstruct.y,xi);

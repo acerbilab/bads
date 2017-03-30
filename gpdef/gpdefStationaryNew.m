@@ -203,7 +203,8 @@ if isempty(gpstruct)
 
     %% gp sampling weight
 
-    gpstruct.hypweight = 1;
+    Nsamples = max(1,options.gpSamples);
+    gpstruct.hypweight = ones(1,Nsamples)/Nsamples;
     gpstruct.hypmean = [];
 
     % Check every field

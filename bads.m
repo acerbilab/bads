@@ -200,6 +200,7 @@ defopts.AcqHedge                = 'off                  % Hedge acquisition func
 defopts.CholAttempts            = '0                    % Attempts at performing the Cholesky decomposition';
 defopts.NoiseNudge              = '[1 0]                % Increase nudge to noise in case of Cholesky failure';
 defopts.RemovePointsAfterTries  = '1                    % Start removing training points after this number of failures';
+defopts.gpSVGDiters             = '200                  % SVGD iterations for GP training';
 
 defopts.UncertainIncumbent      = 'yes                  % Treat incumbent as if uncertain regardless of uncertainty handling';
 defopts.MeshNoiseMultiplier     = '0.5                  % Contribution to log noise magnitude from log mesh size (0 for noisy functions)';
@@ -339,7 +340,8 @@ gpstruct.fun = funwrapper;
 fhyp = gpstruct.hyp;
 
 % Initialize struct with GP prediction statistics
-optimState.gpstats = savegpstats([],[],[],[],ones(1,max(1,options.gpSamples)));
+Nsamples = max(1,options.gpSamples);
+optimState.gpstats = savegpstats([],[],[],[],ones(1,Nsamples)/Nsamples);
 
 lastskipped = 0;                % Last skipped iteration
 
@@ -516,7 +518,11 @@ while ~isFinished_flag
                     0);
                 
                 % Compute estimated function value at point
-                [~,~,fsearch,fs2] = gppred(usearch,gpstructnew);
+                [~,~,fsearch,fs2] = gppred(usearch,gpstructnew);                                
+                if numel(gpstructnew.hyp) > 1
+                    fsearch = weightedsum(gpstructnew.hypweight,fsearch,1);
+                    fs2 = weightedsum(gpstructnew.hypweight,fs2,1);
+                end
                 fsearchsd = sqrt(fs2);
             else
                 fsearchsd = 0;
@@ -729,6 +735,9 @@ while ~isFinished_flag
             % less than SufficientImprovement (assumes independence --
             % conservative estimate towards continuing polling)
             gammaz = (optimState.ftarget - SufficientImprovement - fm)./fs;
+            if numel(gpstruct.hyp) > 1
+                gammaz = weightedsum(gpstruct.hypweight,gammaz,1);
+            end
             if all(isfinite(gammaz)) && isreal(gammaz)
                 fpi = 0.5*erfc(-gammaz/sqrt(2));
                 fpi = sort(fpi,'descend');
@@ -783,6 +792,10 @@ while ~isFinished_flag
                 
                 % Compute estimated function value at point
                 [~,~,fpoll,fs2] = gppred(unew,gpstruct);
+                if numel(gpstruct.hyp) > 1
+                    fpoll = weightedsum(gpstruct.hypweight,fpoll,1);
+                    fs2 = weightedsum(gpstruct.hypweight,fs2,1);
+                end                
                 fpollsd = sqrt(fs2);
             else
                 fpollsd = 0;                
@@ -1084,7 +1097,8 @@ refitgp_flag = optimState.lastfitgp < (optimState.funccount - options.MinRefitTi
 if refitgp_flag
     optimState.lastfitgp = optimState.funccount;
     % Reset GP prediction statistics
-    optimState.gpstats = savegpstats([],[],[],[],ones(1,max(1,options.gpSamples)));
+    Nsamples = max(1,options.gpSamples);
+    optimState.gpstats = savegpstats([],[],[],[],ones(1,Nsamples)/Nsamples);
     unrelgp_flag = 0;
 end
 
@@ -1138,6 +1152,10 @@ if optimState.UncertaintyHandling || options.UncertainIncumbent
     gptemp.hyp = hyp;
     [~,~,ftargetmu,ftargets2] = gppred(ubest,gptemp);
     ftargetmu = real(ftargetmu);
+    if numel(gptemp.hyp) > 1
+         ftargetmu = weightedsum(gptemp.hypweight,ftargetmu,1);
+         ftargets2 = weightedsum(gptemp.hypweight,ftargets2,1);
+    end    
     ftargets = sqrt(max(ftargets2,0));
     if ~isfinite(ftargetmu) || ~isreal(ftargets) || ~isfinite(ftargets)
         ftargetmu = optimState.fval;
@@ -1229,6 +1247,10 @@ for index = 1:iter
 
     % Compute estimated function value at point
     [~,~,fval,fs2] = gppred(ui,gpstruct);
+    if numel(gpstruct.hyp) > 1
+        fval = weightedsum(gpstruct.hypweight,fval,1);
+        fs2 = weightedsum(gpstruct.hypweight,fs2,1);
+    end    
     fsd = sqrt(fs2);
 
     optimState.iterList.fval(index) = fval;

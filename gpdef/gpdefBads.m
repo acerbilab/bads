@@ -177,8 +177,9 @@ if isempty(gpstruct)
     end
     gpstruct.bounds.mean{1} = [-Inf; Inf];
 
-    %% GP sampling weight (no samples, do maximum likelihood)
-    gpstruct.hypweight = 1;
+    %% GP sampling weight
+    Nsamples = max(1,options.gpSamples);
+    gpstruct.hypweight = ones(1,Nsamples)/Nsamples;
     gpstruct.hypmean = [];
 
     %% Finalize GP
