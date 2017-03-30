@@ -33,7 +33,7 @@ ll = 0.5*gpstruct.hyp.cov(gpstruct.ncovoffset+(1:nvars));
 rescaledLenscale = exp(ll - mean(ll))';
 
 % Small jitter added to each direction
-jit = options.TolMesh;
+jit = optimState.TolMesh;
 
 % Compute vector weights
 mu = 0.5*size(X,1);

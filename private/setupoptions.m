@@ -57,20 +57,6 @@ for f = cellfields
     end
 end
 
-% Change options for uncertainty handling
-if options.UncertaintyHandling
-    options.TolStallIters = 2*options.TolStallIters;
-    options.Ndata = max(200,options.Ndata);
-    options.MinNdata = 2*options.MinNdata;
-    options.Ninit = min(max(20,options.Ninit),options.MaxFunEvals);
-    %options.gpMeanPercentile = 50;
-    options.MinFailedPollSteps = Inf;
-    options.MeshNoiseMultiplier = 0;
-    if isempty(options.NoiseSize); options.NoiseSize = 1; end
-else
-    if isempty(options.NoiseSize); options.NoiseSize = sqrt(options.TolFun); end
-end
-
 % Check if MATLAB's Optimization Toolbox™ is available
 if isempty(options.OptimToolbox)
     if exist('fmincon.m','file') && exist('fminunc.m','file') && exist('optimoptions.m','file') ...

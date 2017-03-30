@@ -25,7 +25,7 @@ U = optimState.U(index,:);
 Y = optimState.Y(index);
 if isfield(optimState,'S'); S = optimState.S(index); end
 D = numel(uc);
-rotategp_flag = isfield(gpstruct,'C') && ~isempty(gpstruct.C);            
+rotategp_flag = isfield(gpstruct,'C') && ~isempty(gpstruct.C);
 
 switch (lower(method))
     
@@ -80,7 +80,7 @@ switch (lower(method))
         end
 
         ug = periodCheck(bsxfun(@plus,uc,vv),optimState.LB,optimState.UB,optimState);
-        ug = uCheck(ug,options.TolMesh,optimState,1);
+        ug = uCheck(ug,optimState.TolMesh,optimState,1);
         ug = [uc; ug];
                 
         % Distance between vector and set of reference vectors
@@ -146,11 +146,11 @@ switch (lower(method))
 
         %xc = origunits(uc,optimState);
         %xg = periodCheck(bsxfun(@plus,xc,vv),optimState.LB,optimState.UB,optimState,0);
-        %xg = xCheck(xg,optimState.LB,optimState.UB,options.TolMesh,optimState,0);
+        %xg = xCheck(xg,optimState.LB,optimState.UB,optimState.TolMesh,optimState,0);
         %ug = [uc; gridunits(xg,optimState)];
 
         ug = periodCheck(bsxfun(@plus,uc,vv),optimState.LB,optimState.UB,optimState);
-        ug = uCheck(ug,options.TolMesh,optimState,1);
+        ug = uCheck(ug,optimState.TolMesh,optimState,1);
         ug = [uc; ug];        
         
         % Distance between vector and set of poll vectors

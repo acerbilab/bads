@@ -131,7 +131,7 @@ for i = 1:options.Nsearchiter
     unew = force2grid(unew,optimState);
 
     % Remove already evaluated or unfeasible points from search set
-    unew = uCheck(unew,options.TolMesh,optimState,1);
+    unew = uCheck(unew,optimState.TolMesh,optimState,1);
     
     z = [];
     try

@@ -5,7 +5,7 @@ if nargin < 7; gpstruct = []; end
 
 MeshSize = optimState.meshsize;
 TolFun = options.TolFun;
-TolMesh = options.TolMesh;
+TolMesh = optimState.TolMesh;
 
 gaussPriorFunc = @priorGauss;
 

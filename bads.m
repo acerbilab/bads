@@ -100,7 +100,7 @@ defopts.PeriodicVars            = '[]           % Array with indices of periodic
 defopts.NonlinearScaling        = 'on           % Automatic nonlinear rescaling of variables';
 defopts.CompletePoll            = 'off          % Complete polling around the current iterate';
 defopts.AccelerateMesh          = 'on           % Accelerate mesh contraction';
-defopts.UncertaintyHandling     = 'off          % Explicit handling of noise';
+defopts.UncertaintyHandling     = 'off          % Explicit handling of noise (if empty, determine automatically)';
 defopts.NoiseObj                = 'off          % Objective fcn returns noise value as 2nd argument (unsupported)';
 defopts.NoiseSize               = '[]           % Base observation noise magnitude';
 defopts.OptimToolbox            = '[]           % Use Optimization Toolbox (if empty, determine at runtime)';
@@ -277,9 +277,8 @@ optimState = [];
 options = setupoptions(nvars,defopts,options);    
 
 % Setup and transform variables
-[u0,LB,UB,PLB,PUB,MeshSizeInteger,TolMesh,optimState] = ...
+[u0,LB,UB,PLB,PUB,MeshSizeInteger,optimState] = ...
     setupvars(x0,LB,UB,PLB,PUB,optimState,options,prnt);
-options.TolMesh = TolMesh;
     
 optimState = updateSearchBounds(optimState);
 
@@ -300,13 +299,27 @@ end
 iter = 0;
 optimState.iter = iter;
 
-% Evaluate starting point and initial mesh
+% Evaluate starting point and initial mesh, determine if function is noisy
 [u,fval,isFinished_flag,optimState,displayFormat] = ...
     evalinitmesh(u0,funwrapper,SkipInitPoint,optimState,options,prnt);
 exitflag = 0;
 msg = 'Optimization terminated: reached maximum number of function evaluations after initialization.';
     
-if options.UncertaintyHandling  % Current uncertainty in estimate
+% Change options for uncertainty handling
+if optimState.UncertaintyHandling
+    options.TolStallIters = 2*options.TolStallIters;
+    options.Ndata = max(200,options.Ndata);
+    options.MinNdata = 2*options.MinNdata;
+    options.Ninit = min(max(20,options.Ninit),options.MaxFunEvals);
+    %options.gpMeanPercentile = 50;
+    options.MinFailedPollSteps = Inf;
+    options.MeshNoiseMultiplier = 0;
+    if isempty(options.NoiseSize); options.NoiseSize = 1; end
+else
+    if isempty(options.NoiseSize); options.NoiseSize = sqrt(options.TolFun); end
+end
+
+if optimState.UncertaintyHandling  % Current uncertainty in estimate
     fsd = options.NoiseSize(1);
 else
     fsd = 0;
@@ -407,7 +420,7 @@ while ~isFinished_flag
         usearchset = force2grid(usearchset, optimState);
                 
         % Remove already evaluated or unfeasible points from search set
-        usearchset = uCheck(usearchset,options.TolMesh,optimState,1);
+        usearchset = uCheck(usearchset,optimState.TolMesh,optimState,1);
         
         if ~isempty(usearchset) % Non-empty search set
 
@@ -447,7 +460,7 @@ while ~isFinished_flag
             % (generally it does not improve results)
             if options.SearchOptimize
                 acqoptoptions = optimset('Display','off','GradObj','off','DerivativeCheck','off',...
-                    'TolX',options.TolMesh,'TolFun',options.TolFun);
+                    'TolX',optimState.TolMesh,'TolFun',options.TolFun);
 
                 try
                     acqu = usearchset(index,:);
@@ -461,7 +474,7 @@ while ~isFinished_flag
                         acqu,[],[],[],[],acqlb,acqub,[],acqoptoptions);
                     acqu = force2grid(acqu, optimState);
                     acqu = periodCheck(acqu,LB,UB,optimState,1);
-                    acqu = uCheck(acqu,options.TolMesh,optimState,1);
+                    acqu = uCheck(acqu,optimState.TolMesh,optimState,1);
                 catch
                     acqu = [];
                 end
@@ -492,7 +505,7 @@ while ~isFinished_flag
                     0);
             end
             
-            if options.UncertaintyHandling
+            if optimState.UncertaintyHandling
                 gpstructnew = gpTrainingSet(gpstruct, ...
                     options.gpMethod, ...
                     usearch, ...
@@ -555,7 +568,7 @@ while ~isFinished_flag
             % Update incumbent point
             [ubest,fval,fsd,optimState,gpstruct] = UpdateIncumbent(ubest,fval,fsd,usearch,fsearch,fsearchsd,optimState,gpstruct,options);
             
-            if options.UncertaintyHandling; gpstruct = gpstructnew; end
+            if optimState.UncertaintyHandling; gpstruct = gpstructnew; end
             gpstruct.post = []; % Reset posterior
         else
             % Search failed
@@ -590,7 +603,7 @@ while ~isFinished_flag
        
        % Print search results       
        if prnt > 2 && ~isempty(searchstring)
-           if options.UncertaintyHandling
+           if optimState.UncertaintyHandling
                fprintf(displayFormat,iter,optimState.funccount,fval,fsd,MeshSize,searchstring,'');                
            else
                fprintf(displayFormat,iter,optimState.funccount,fval,MeshSize,searchstring,'');
@@ -664,7 +677,7 @@ while ~isFinished_flag
                 if options.ForcePollMesh
                     upollnew = force2grid(upollnew, optimState);
                 end
-                upollnew = uCheck(upollnew,options.TolMesh,optimState,0);
+                upollnew = uCheck(upollnew,optimState.TolMesh,optimState,0);
                 
                 % Add new poll points to polling set
                 upoll = [upoll; upollnew];
@@ -757,7 +770,7 @@ while ~isFinished_flag
             optimState.gpstats = ...
                 savegpstats(optimState.gpstats,fpoll,ymu(:,index),ys(:,index),gpstruct.hypweight);
             
-            if options.UncertaintyHandling
+            if optimState.UncertaintyHandling
                 % Add just polled point to training set
                 gpstruct = gpTrainingSet(gpstruct, ...
                     'add', ...
@@ -866,7 +879,7 @@ while ~isFinished_flag
             action = [];
             if refitted_flag; if isempty(action); action = 'Train'; else action = [action ', train']; end; end            
             if lastskipped == iter; if isempty(action); action = 'Skip'; else action = [action ', skip']; end; end
-            if options.UncertaintyHandling
+            if optimState.UncertaintyHandling
                 fprintf(displayFormat,iter,optimState.funccount,fval,fsd,MeshSize,string,action);                
             else
                 fprintf(displayFormat,iter,optimState.funccount,fval,MeshSize,string,action);
@@ -904,7 +917,7 @@ while ~isFinished_flag
         exitflag = 0;
         msg = 'Optimization terminated: reached maximum number of function evaluations OPTIONS.MaxFunEvals.';
     end
-    if MeshSize < options.TolMesh
+    if MeshSize < optimState.TolMesh
         isFinished_flag = true;
         exitflag = 1;
         msg = 'Optimization terminated: mesh size less than OPTIONS.TolMesh.';
@@ -928,7 +941,7 @@ while ~isFinished_flag
     end
     
     % Re-evaluate all points
-    if DoPollStep_flag && options.UncertaintyHandling                        
+    if DoPollStep_flag && optimState.UncertaintyHandling                        
         if iter > 1
             optimState = reevaluateIterList(optimState,gpstruct,options);
             
@@ -966,7 +979,7 @@ while ~isFinished_flag
 end
 
 % Re-evaluate all best points (skip first iteration)
-if options.UncertaintyHandling && iter > 1    
+if optimState.UncertaintyHandling && iter > 1    
     optimState = reevaluateIterList(optimState,gpstruct,options);
         
     % Order by lowest probabilistic upper bound and choose best iterate
@@ -990,7 +1003,7 @@ end
 
 if nargout > 3
     output.function = func2str(fun);    
-    if options.UncertaintyHandling
+    if optimState.UncertaintyHandling
         output.targettype = 'deterministic';
     else    
         output.targettype = 'stochastic';
@@ -1119,7 +1132,7 @@ end
 function optimState = UpdateTarget(ubest,hyp,optimState,gpstruct,options)
 %UPDATETARGET Update optimization target (based on GP at incumbent).
 
-if options.UncertaintyHandling || options.UncertainIncumbent
+if optimState.UncertaintyHandling || options.UncertainIncumbent
     gptemp = gpstruct;
     gptemp.hyp = hyp;
     [~,~,ftargetmu,ftargets2] = gppred(ubest,gptemp);

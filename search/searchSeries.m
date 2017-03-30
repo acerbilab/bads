@@ -27,8 +27,8 @@ xsuccess = xsuccess*R';
 for i = 1:D
     index = max(1,t-10):t;
     
-    stdy = sqrt(std(xsuccess(index,i)).^2 + options.TolMesh.^2);
-    gptemp = gpinit(stdy,options); 
+    stdy = sqrt(std(xsuccess(index,i)).^2 + optimState.TolMesh.^2);
+    gptemp = gpinit(stdy,options,optimState); 
     gptemp.x = (index)';
     % gptemp.x = -fsuccess(index); 
     gptemp.y = xsuccess(index,i);
@@ -109,11 +109,11 @@ end
 end
 
 %--------------------------------------------------------------------------
-function gptemp = gpinit(stdy,options)
+function gptemp = gpinit(stdy,options,optimState)
 %BGA_GPINIT
 
 TolFun = options.TolFun;
-TolMesh = options.TolMesh;
+TolMesh = optimState.TolMesh;
 
 %% gp covariance function
 

@@ -22,7 +22,7 @@ cmasearch = periodCheck(cmasearch,LB,UB,optimState);
 cmasearch = force2grid(cmasearch, optimState);
 
 % Remove already evaluated or unfeasible points from search set
-cmasearch = uCheck(cmasearch,options.TolMesh,optimState,1);                                    
+cmasearch = uCheck(cmasearch,optimState.TolMesh,optimState,1);                                    
 
 if size(cmasearch,1) > 2*nvars                     
     % Evaluate acquisition function on CMA search set

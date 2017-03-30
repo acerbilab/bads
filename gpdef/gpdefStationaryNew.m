@@ -6,7 +6,7 @@ if nargin < 8 || isempty(gpmlext); gpmlext = 0; end     % Use gpml_extensions
 
 MeshSize = optimState.meshsize;
 TolFun = options.TolFun;
-TolMesh = options.TolMesh;
+TolMesh = optimState.TolMesh;
 
 if gpmlext
     gaussPriorFunc = @gaussian_prior;

@@ -1,4 +1,4 @@
-function [u0,LB,UB,PLB,PUB,MeshSizeInteger,TolMesh,optimState] = setupvars(x0,LB,UB,PLB,PUB,optimState,options,prnt)
+function [u0,LB,UB,PLB,PUB,MeshSizeInteger,optimState] = setupvars(x0,LB,UB,PLB,PUB,optimState,options,prnt)
 %INITVARS Initialize variables and transform coordinates.
 
 nvars = numel(x0);
@@ -85,7 +85,7 @@ optimState.x0 = x0;         % Record starting point (original coordinates)
 optimState.u = u0;
 
 % Put TOLMESH on space
-TolMesh = options.PollMeshMultiplier^ceil(log(options.TolMesh)/log(options.PollMeshMultiplier));
+optimState.TolMesh = options.PollMeshMultiplier^ceil(log(options.TolMesh)/log(options.PollMeshMultiplier));
 
 % Periodic variables
 optimState.periodicvars = false(1, nvars);

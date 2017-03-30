@@ -27,7 +27,7 @@ ftarget = ftarget - optimState.sdlevel*sqrt(fs2 + options.TolFun^2);
 if 0
     
     optoptions = optimset('Display','off','GradObj','on','DerivativeCheck','off',...
-        'TolX',options.TolMesh,'TolFun',options.TolFun);
+        'TolX',optimState.TolMesh,'TolFun',options.TolFun);
     
     idx = 1;
     funcCount = 0;

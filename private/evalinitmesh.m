@@ -21,7 +21,7 @@ optimState.fval = fval;
 
 % Display format depends whether the objective is noisy
 if prnt > 2
-    if options.UncertaintyHandling
+    if optimState.UncertaintyHandling
         displayFormat = ' %5.0f       %5.0f    %12.6g    %12.6g    %12.6g    %20s    %s\n';
         fprintf(' Iteration    f-count      E[f(x)]        SD[f(x)]      MeshScale          Method          Actions\n');
     else
@@ -33,7 +33,7 @@ else
 end
 
 if prnt > 2 && ~SkipInitPoint
-    if options.UncertaintyHandling
+    if optimState.UncertaintyHandling
         fprintf(displayFormat, 0, optimState.funccount, fval, NaN, MeshSize, '', '');
     else
         fprintf(displayFormat, 0, optimState.funccount, fval, MeshSize, '', '');
@@ -63,7 +63,7 @@ if options.Ninit > 0
     u1 = force2grid(u1, optimState);
 
     % Ignore duplicates, vectors outside bounds or previously evaluated
-    u1 = uCheck(u1,options.TolMesh,optimState,1);
+    u1 = uCheck(u1,optimState.TolMesh,optimState,1);
 
     % Evaluate all points
     for i = 1:size(u1,1)
@@ -77,7 +77,7 @@ if options.Ninit > 0
     u = u1(idx,:);
 
     if prnt > 2
-        if options.UncertaintyHandling
+        if optimState.UncertaintyHandling
             fprintf(displayFormat, 0, optimState.funccount, fval, NaN, MeshSize, 'Initial mesh', '');            
         else
             fprintf(displayFormat, 0, optimState.funccount, fval, MeshSize, 'Initial mesh', '');

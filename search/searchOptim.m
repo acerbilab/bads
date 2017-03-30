@@ -7,7 +7,7 @@ if nargin < 1
 end
 
 optoptions = optimset('Display','off','GradObj','on','DerivativeCheck','off',...
-    'TolX',options.TolMesh,'TolFun',options.TolFun);
+    'TolX',optimState.TolMesh,'TolFun',options.TolFun);
 
 [ymui,ys2i,fmui,fs2i,~,post] = gp(gpstruct.hyp(1),gpstruct.inf,gpstruct.mean,gpstruct.cov, ...
     gpstruct.lik,gpstruct.x,gpstruct.y,x0);

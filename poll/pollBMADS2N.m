@@ -68,7 +68,7 @@ elseif 0
         if ~isempty(PollBasis)
             t1 = sum(abs(bsxfun(@minus,v,PollBasis)),2); 
             t2 = sum(abs(bsxfun(@minus,-v,PollBasis)),2);
-            if all(t1 > options.TolMesh/2) && all(t2 > options.TolMesh/2)
+            if all(t1 > optimState.TolMesh/2) && all(t2 > optimState.TolMesh/2)
                 PositiveBasis = [PositiveBasis; v];
             end
         end
