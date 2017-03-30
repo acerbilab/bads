@@ -1,4 +1,4 @@
-function [u,fval,isFinished,optimState,displayFormat] = evalinitmesh(u0,funwrapper,SkipInitPoint,optimState,options,prnt)
+function [u,fval,isFinished,optimState,displayFormat] = evalinitmesh(u0,funwrapper,optimState,options,prnt)
 %EVALINITMESH Evaluate initial mesh.
 
 LB = optimState.LB;
@@ -7,16 +7,18 @@ PLB = optimState.PLB;
 PUB = optimState.PUB;
 MeshSize = optimState.meshsize;
 
-if SkipInitPoint && options.Ninit < 1
-    error('If the initial point X0 is not specified, OPTIONS.Ninit needs to be > 0.');
+% If the objective fcn returns estimated noise, UncertaintyHandling is ON
+if options.NoiseObj
+    optimState.UncertaintyHandling = 1;
+    if ~isempty(options.UncertaintyHandling) && ~options.UncertaintyHandling
+        error('OPTIONS.NoiseObj is ON (objective fcn with estimated noise output) but OPTIONS.UncertaintyHandling is OFF.');
+    end
+else
+    optimState.UncertaintyHandling = options.UncertaintyHandling;
 end
 
 % Evaluate starting point (if specified)
-if ~SkipInitPoint
-    [fval,optimState] = funlogger(funwrapper,u0,optimState,'iter');
-else
-    fval = Inf;
-end
+[fval,optimState] = funlogger(funwrapper,u0,optimState,'iter');
 optimState.fval = fval;
 
 % Display format depends whether the objective is noisy
@@ -32,7 +34,7 @@ else
     displayFormat = [];
 end
 
-if prnt > 2 && ~SkipInitPoint
+if prnt > 2
     if optimState.UncertaintyHandling
         fprintf(displayFormat, 0, optimState.funccount, fval, NaN, MeshSize, '', '');
     else
@@ -41,7 +43,7 @@ if prnt > 2 && ~SkipInitPoint
 end
 
 % Only one function evaluation!
-if ~SkipInitPoint && options.MaxFunEvals == 1
+if options.MaxFunEvals == 1
     u = u0;
     isFinished = 1;
     return;
@@ -51,7 +53,7 @@ end
 if options.Ninit > 0
 
     % Evaluate initial points but not more than OPTIONS.MaxFunEvals
-    Ninit = min(options.Ninit, options.MaxFunEvals - double(~SkipInitPoint));
+    Ninit = min(options.Ninit, options.MaxFunEvals - 1);
 
     % Call initialization function
     u1 = options.InitFcn(u0,LB,UB,PLB,PUB,Ninit,optimState,options);

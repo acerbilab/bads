@@ -17,7 +17,7 @@ end
 
 % Test that all vectors have the same length
 if any([numel(LB),numel(UB),numel(PLB),numel(PUB)] ~= nvars)
-    error('All input vectors need to have the same size.');
+    error('All input vectors (X0, LB, UB, PLB, PUB), if specified, need to have the same size.');
 end
 
 % Test that all vectors are row vectors
@@ -80,8 +80,17 @@ optimState.UBsearch(optimState.UBsearch > optimState.UB) = ...
     optimState.UBsearch(optimState.UBsearch > optimState.UB) - optimState.searchmeshsize;
 
 % Starting point in grid coordinates
-u0 = force2grid(gridunits(x0,optimState),optimState);
-optimState.x0 = x0;         % Record starting point (original coordinates)
+if any(~isfinite(x0))   % Invalid/not provided starting point
+    if prnt > 0
+        fprintf('Initial starting point is invalid or not provided. Starting from center of plausible region.\n');
+    end
+    u0 = force2grid(0.5*(PLB + PUB),optimState);    % Midpoint
+    x0 = origunits(u0,optimState);
+else
+    u0 = force2grid(gridunits(x0,optimState),optimState);
+end
+
+optimState.x0 = x0; % Record starting point (original coordinates)
 optimState.u = u0;
 
 % Put TOLMESH on space

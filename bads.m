@@ -265,9 +265,6 @@ if isempty(x0)
     if prnt > 2
         fprintf(' NVARS = %d.\n', numel(x0));
     end
-    SkipInitPoint = 1;  % No starting point provided
-else
-    SkipInitPoint = 0;  % Starting point provided
 end
 
 nvars = numel(x0);
@@ -301,7 +298,7 @@ optimState.iter = iter;
 
 % Evaluate starting point and initial mesh, determine if function is noisy
 [u,fval,isFinished_flag,optimState,displayFormat] = ...
-    evalinitmesh(u0,funwrapper,SkipInitPoint,optimState,options,prnt);
+    evalinitmesh(u0,funwrapper,optimState,options,prnt);
 exitflag = 0;
 msg = 'Optimization terminated: reached maximum number of function evaluations after initialization.';
     
@@ -922,7 +919,7 @@ while ~isFinished_flag
         exitflag = 1;
         msg = 'Optimization terminated: mesh size less than OPTIONS.TolMesh.';
     end
-    if iter > options.TolStallIters        
+    if iter > options.TolStallIters
         HistoricImprovement = ...
             EvalImprovement(optimState.iterList.fval(iter-options.TolStallIters),fval,optimState.iterList.fsd(iter-options.TolStallIters),fsd,options.ImprovementQuantile);
         if HistoricImprovement < options.TolFun

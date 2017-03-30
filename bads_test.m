@@ -1,5 +1,6 @@
 %% Test BADS
 
+rng(0);
 nvars = 6;                              % Number of dimensions
 LB = -Inf(1,nvars);                     % Lower bound
 UB = Inf(1,nvars);                      % Upper bound
@@ -16,7 +17,7 @@ fun = @(x) sum((x./(1:numel(x)).^2).^2);     % Objective function
 
 options = bads('defaults');             % Default options
 options.Ninit = 2;                      % Only 2 points for initial mesh
-options.Plot = 'profile';               % Show profile during optimization
+%options.Plot = 'profile';               % Show profile during optimization
 
 rng(0);
 [x,fval,exitflag,output,funValues,gpstruct] = bads(fun,x0,LB,UB,PLB,PUB,options);
