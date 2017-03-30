@@ -16,7 +16,7 @@ function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PU
 %   UB(i) = Inf if X(i) is unbounded above. Note that: 
 %      - if LB and/or UB contain unbounded variables, the respective 
 %        values of PLB and/or PUB need to be specified (see below).
-%      - if X0 is empty, PLB and PUB need to be specified as vectors.
+%      - if X0 is empty, LB and UB need to be specified as vectors.
 %
 %   X = BADS(FUN,X0,LB,UB,PLB,PUB) specifies a set of plausible lower and
 %   upper bounds such that LB <= PLB <= X0 <= PUB <= UB. Both PLB and PUB
@@ -69,8 +69,12 @@ function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PU
 %   To run BADS on a noisy (stochastic) objective function, set
 %       OPTIONS.UncertaintyHandling = 1
 %       OPTIONS.NoiseSize = SIGMA
-%   where SIGMA is an estimate of the SD of the noise in your problem. 
-%   (If not specified, default SIGMA = 1).
+%   where SIGMA is an estimate of the SD of the noise in your problem in
+%   a good region of the parameter space. (If not specified, default 
+%   SIGMA = 1).
+%   Set OPTIONS.UncertaintyHandling = 0 for a deterministic function.
+%   If OPTIONS.UncertaintyHandling is not specified, BADS will determine at
+%   runtime if the objective function is noisy.
 
 %   Author: Luigi Acerbi
 %   Release date: Mar 18, 2017
@@ -100,8 +104,8 @@ defopts.PeriodicVars            = '[]           % Array with indices of periodic
 defopts.NonlinearScaling        = 'on           % Automatic nonlinear rescaling of variables';
 defopts.CompletePoll            = 'off          % Complete polling around the current iterate';
 defopts.AccelerateMesh          = 'on           % Accelerate mesh contraction';
-defopts.UncertaintyHandling     = 'off          % Explicit handling of noise (if empty, determine automatically)';
-defopts.NoiseObj                = 'off          % Objective fcn returns noise value as 2nd argument (unsupported)';
+defopts.UncertaintyHandling     = '[]           % Explicit noise handling (if empty, determine at runtime)';
+defopts.NoiseObj                = 'off          % Objective fcn returns noise estimate as 2nd argument (unsupported)';
 defopts.NoiseSize               = '[]           % Base observation noise magnitude';
 defopts.OptimToolbox            = '[]           % Use Optimization Toolbox (if empty, determine at runtime)';
 
@@ -123,6 +127,7 @@ defopts.Debug                   = 'off                  % Debug mode, plot addit
 defopts.TolMesh                 = '1e-6                 % Tolerance on mesh size';
 defopts.TolFun                  = '1e-3                 % Min significant change of objective fcn';
 defopts.TolStallIters           = '4 + floor(nvars/2)   % Max iterations with no significant change (doubled under uncertainty)';
+defopts.TolNoise                = 'sqrt(eps)*options.TolFun  % Min variability for a fcn to be considered noisy';
 
 defopts.Ninit                   = 'nvars                % Number of initial objective fcn evaluations';
 defopts.InitFcn                 = '@initSobol           % Initialization function';
@@ -307,7 +312,6 @@ if optimState.UncertaintyHandling
     options.TolStallIters = 2*options.TolStallIters;
     options.Ndata = max(200,options.Ndata);
     options.MinNdata = 2*options.MinNdata;
-    options.Ninit = min(max(20,options.Ninit),options.MaxFunEvals);
     %options.gpMeanPercentile = 50;
     options.MinFailedPollSteps = Inf;
     options.MeshNoiseMultiplier = 0;

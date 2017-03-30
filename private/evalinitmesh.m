@@ -21,14 +21,35 @@ end
 [fval,optimState] = funlogger(funwrapper,u0,optimState,'iter');
 optimState.fval = fval;
 
+% If UncertaintyHandling is not specified, test if function is noisy
+if isempty(optimState.UncertaintyHandling)
+    uncertaintyTest = 'Uncertainty test';
+    x0 = origunits(u0,optimState);
+    fval2 = funwrapper(x0);
+    optimState.funccount = optimState.funccount + 1;    % +1 fcn eval to count
+    if abs(fval - fval2) > options.TolNoise
+        optimState.UncertaintyHandling = 1;
+        if prnt > 0
+            fprintf('Beginning optimization of a STOCHASTIC objective fcn.\n');
+        end
+    else
+        optimState.UncertaintyHandling = 0;
+        if prnt > 1
+            fprintf('Beginning optimization of a DETERMINISTIC objective fcn.\n');
+        end
+    end
+else
+    uncertaintyTest = '';    
+end
+
 % Display format depends whether the objective is noisy
 if prnt > 2
     if optimState.UncertaintyHandling
-        displayFormat = ' %5.0f       %5.0f    %12.6g    %12.6g    %12.6g    %20s    %s\n';
-        fprintf(' Iteration    f-count      E[f(x)]        SD[f(x)]      MeshScale          Method          Actions\n');
+        displayFormat = ' %5.0f       %5.0f    %12.6g    %12.6g    %12.6g    %20s      %s\n';
+        fprintf(' Iteration    f-count      E[f(x)]        SD[f(x)]           MeshScale          Method          Actions\n');
     else
-        displayFormat = ' %5.0f       %5.0f    %12.6g    %12.6g    %20s    %s\n';
-        fprintf(' Iteration    f-count          f(x)          MeshScale          Method          Actions\n');
+        displayFormat = ' %5.0f       %5.0f    %12.6g    %12.6g    %20s      %s\n';
+        fprintf(' Iteration    f-count         f(x)           MeshScale          Method          Actions\n');
     end
 else
     displayFormat = [];
@@ -36,9 +57,9 @@ end
 
 if prnt > 2
     if optimState.UncertaintyHandling
-        fprintf(displayFormat, 0, optimState.funccount, fval, NaN, MeshSize, '', '');
+        fprintf(displayFormat, 0, optimState.funccount, fval, NaN, MeshSize, '', uncertaintyTest);
     else
-        fprintf(displayFormat, 0, optimState.funccount, fval, MeshSize, '', '');
+        fprintf(displayFormat, 0, optimState.funccount, fval, MeshSize, '', uncertaintyTest);
     end
 end
 
@@ -47,6 +68,11 @@ if options.MaxFunEvals == 1
     u = u0;
     isFinished = 1;
     return;
+end
+
+% If dealing with a noisy function, use a large initial mesh
+if optimState.UncertaintyHandling
+    options.Ninit = min(max(20,options.Ninit),options.MaxFunEvals);
 end
 
 % Additional initial points
