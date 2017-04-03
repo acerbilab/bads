@@ -18,11 +18,6 @@ fun = @(x) sum((x./(1:numel(x)).^2).^2);     % Objective function
 options = bads('defaults');             % Default options
 %options.UncertaintyHandling = 0;        % Deterministic function (determined at runtime if not specified)
 %options.Plot = 'profile';               % Show profile during optimization
-options.gpSamples = 1;
-%options.gpdefFcn = '{@gpdefBads,''matern5'',1}';
-%options.AcqHedge = 'on';
-options.PollAcqFcn = '@acqThompson';
-options.SearchAcqFcn = '@acqThompson';
 
 rng(0);
 [x,fval,exitflag,output,funValues,gpstruct] = bads(fun,x0,LB,UB,PLB,PUB,options);
@@ -40,8 +35,6 @@ options = bads('defaults');             % Default options
 %options.Plot = 'profile';              % Show profile during optimization
 %options.UncertaintyHandling = 1;        % Activate noise handling (determined at runtime if not specified)
 options.NoiseSize = 1;                  % Estimated noise magnitude
-%options.gpSamples = 10;
-%options.gpdefFcn = '{@gpdefBads,''matern5'',1}';
 
 rng(0);
 [x,fval,exitflag,output,funValues,gpstruct] = bads(fun,x0,LB,UB,PLB,PUB,options);
