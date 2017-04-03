@@ -436,7 +436,7 @@ while ~isFinished_flag
                 %----------------------------------------------------------
                 if options.AcqHedge
                     [optimState.hedge,acqIndex,ymu,ys] = ...
-                        acqPortfolio('acq',optimState.hedge,usearchset,optimState.ftarget,fstarget,gpstruct,optimState,options,SufficientImprovement);
+                        acqPortfolio('acq',optimState.hedge,usearchset,optimState.ftarget,0,gpstruct,optimState,options,SufficientImprovement);
                     index = acqIndex(optimState.hedge.chosen);
                     z = 1;
                 %----------------------------------------------------------
@@ -719,7 +719,7 @@ while ~isFinished_flag
             %--------------------------------------------------------------
             if options.AcqHedge
                 [optimState.hedge,acqIndex,ymu,ys,fm,fs] = ...
-                    acqPortfolio('acq',optimState.hedge,upoll,optimState.ftarget,fstarget,gpstruct,optimState,options,SufficientImprovement);
+                    acqPortfolio('acq',optimState.hedge,upoll,optimState.ftarget,0,gpstruct,optimState,options,SufficientImprovement);
                 index = acqIndex(optimState.hedge.chosen);
             else
             %--------------------------------------------------------------
@@ -1163,7 +1163,7 @@ if optimState.UncertaintyHandling || options.UncertainIncumbent
     end
     
     % Set optimization target slightly below current incumbent
-    if ~options.AcqHedge
+    if ~options.AcqHedge || 1
         if options.AlternativeIncumbent
             % [ftargetmu - optimState.sdlevel*ftargets - optimState.fval]            
             % ftarget = max(ftargetmu - optimState.sdlevel*ftargets, optimState.fval) - options.TolFun;                    
@@ -1172,6 +1172,9 @@ if optimState.UncertaintyHandling || options.UncertainIncumbent
             ftarget = ftargetmu - optimState.sdlevel*sqrt(ftargets2 + options.TolFun^2);
         end
     end
+    
+    
+    
     % ftarget = ftarget - log(optimState.funccount)*sqrt(fs2);
 else
     ftarget = optimState.fval - options.TolFun;

@@ -30,15 +30,8 @@ Fs2 = Kss - V'*V;                       % predictive variances
 try
     Fs = chol(Fs2);
     z = bsxfun(@plus, fmu(:), Fs'*randn(n,1))';
-    %z2 = bsxfun(@plus, fmu(:), Fs'*randn(n,1))';
-
-    %[~,ord1] = sort(z1);
-    %[~,ord2] = sort(z2);
-
-    %z = ord1 + ord2;
-    %z = z1(:)';
 catch
-    z = fmu(:) + fs(:).*randn(n,1);        
+    z = fmu(:) + fs(:).*randn(n,1);
 end
     
     

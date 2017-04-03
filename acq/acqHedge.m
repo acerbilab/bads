@@ -8,29 +8,28 @@ if nargin < 7 || isempty(SufficientImprovement); SufficientImprovement = 0; end
 
 grad = 0;
 
-% Portfolio of acquisition functions
+% Portfolio of acquisition functions (only EI and LCB)
 
 % sdlevel = [0,1,3,10];
 t = optimState.funccount + 1;
-sdlevel = 0.1;
 sdlevel = optimState.sdlevel;
 
-% xxi = 0.01*gpstruct.sf;
-%xxi = 0.01*log(optimState.funccount+1);
+% Different offsets for EI
+% xxi = [0.01,0.1,1]*gpstruct.sf;
+% xxi = 0.01*log(optimState.funccount+1);
 xxi = 0;
 
-% xxi = [0.01,0.1,1]*gpstruct.sf;
-% xxi = [0.001,0.01]*gpstruct.sf;
+% Different ETA values for LCB
 % eta = [0.1,0.2,1];
-eta = [];
+eta = 0.2;
 
 if nargin < 1
     % Initial vector
-    nacq = numel(sdlevel)*numel(xxi)*2 + numel(eta);
+    nacq = numel(sdlevel)*numel(xxi) + numel(eta);
     index = zeros(1, nacq);
     index(1) = 10;
-    % ymu = {'mpi0_0','mei0_0','mpi001_0','mei001_0','mpi0_3','mei0_3','mpi001_3','mei001_3'};
-    ymu = {'mpi','mei','lcb'};
+    % ymu = {'mpi','mei','lcb'};
+    ymu = {'mei','lcb'};
     return;
 end
 
@@ -39,7 +38,7 @@ nvars = size(xi,2);
 Nhyp = numel(gpstruct.hyp);
 
 if grad == 1
-    error('acqNegEI:gradient', ...
+    error('acqHedge:gradient', ...
         'Gradient of acquisition function is not supported.');
 end
 
@@ -54,6 +53,12 @@ fs = sqrt(fs2);
 ys = sqrt(ys2);
 
 index = [];
+
+if any(isnan(fmu)) || any(isnan(fs))
+    index = NaN(1,optimState.hedge.n);
+    fpi = NaN(size(fmu));
+    return;
+end
 
 % Probability of improvement and expected improvement
 for iSD = 1:numel(sdlevel)
@@ -80,13 +85,13 @@ for iSD = 1:numel(sdlevel)
             fpi = Inf(1,n);
         end    
 
-        % Average expected improvement over samples
+        % Average EI over samples
         try
             z = sum(bsxfun(@times,hypw(~isnan(hypw)),z(~isnan(hypw),:)),1);
         catch
             z = Inf(1,n);
         end
-
+        
         % [~,index(iIter)] = min(fpi);
         % [~,index(iIter+numel(xxi))] = min(z);
         [~,index(end+1)] = min(-fpi);
@@ -96,13 +101,13 @@ end
 
 % Lower confidence bound
 for iIter = 1:numel(eta)
-    delta = 0.1;
-    
-    sqrtbetat = sqrt(2*eta(iIter)*log(nvars*t^2*pi^2/(6*delta)));
+    delta = 0.1;    
+    sqrtbetat = sqrt(eta(iIter)*2*log(nvars*t^2*pi^2/(6*delta)));
 
+    % LCB
     z = fmu - sqrtbetat.*fs;
 
-    % Average expected improvement over samples
+    % Average LCB over samples
     try
         z = sum(bsxfun(@times,hypw(~isnan(hypw)),z(~isnan(hypw),:)),1);
     catch

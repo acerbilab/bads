@@ -18,7 +18,6 @@ switch lower(method(1:3))
             hedge.gamma = options.HedgeGamma;
             hedge.beta = options.HedgeBeta;
             hedge.decay = options.HedgeDecay;
-            hedge.string = {'mpi','mei'};
         end
 
         hedge.count = hedge.count + 1;
@@ -26,7 +25,7 @@ switch lower(method(1:3))
 
         hedge.p = exp(hedge.beta*(hedge.g - max(hedge.g)))./sum(exp(hedge.beta*(hedge.g - max(hedge.g))));
         hedge.p = hedge.p*(1-hedge.n*hedge.gamma) + hedge.gamma;
-        % hedge.p
+
         hedge.chosen = find(rand() < cumsum(hedge.p),1);
         if hedge.gamma == 0
             hedge.phat = ones(size(hedge.g));
@@ -53,7 +52,11 @@ switch lower(method(1:3))
             elseif hedge.gamma == 0
                 % Compute estimated function value at point
                 [~,~,fHedge,fs2Hedge] = gppred(uHedge,gpstruct);
-                fsHedge = sqrt(fs2Hedge);                
+                if numel(gpstructnew.hyp) > 1
+                    fHedge = weightedsum(gpstruct.hypweight,fHedge,1);
+                    fs2Hedge = weightedsum(gpstruct.hypweight,fs2Hedge,1);
+                end
+                fsHedge = sqrt(fs2Hedge);
             else
                 fHedge = 0; fsHedge = 1;
             end
