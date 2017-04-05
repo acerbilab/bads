@@ -75,11 +75,22 @@ function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PU
 %   Set OPTIONS.UncertaintyHandling = 0 for a deterministic function.
 %   If OPTIONS.UncertaintyHandling is not specified, BADS will determine at
 %   runtime if the objective function is noisy.
+%
+%   THIS VERSION IS FOR INTERNAL USE ONLY -- PLEASE DO NOT REDISTRIBUTE.
+%   Contact <luigi.acerbi@nyu.edu> for more information.
 
-%   Author: Luigi Acerbi
-%   Release date: Mar 18, 2017
+%--------------------------------------------------------------------------
+% BADS: Bayesian Adaptive Direct Search for nonlinear function minimization.
+% To be used under the terms of the GNU General Public License 
+% (http://www.gnu.org/copyleft/gpl.html).
+%
+%   Author (copyright): Luigi Acerbi, 2017
+%   e-mail: luigi.acerbi@{gmail.com,nyu.edu}
+%   URL: http://luigiacerbi.com
+%   Release date: Apr 04, 2017
 %   Version: 0.9
-%   Website: https://github.com/lacerbi/bads
+%   References: Check https://github.com/lacerbi/bads
+%--------------------------------------------------------------------------
 
 % TO DO:
 % - check options.FunValues provided as argument
