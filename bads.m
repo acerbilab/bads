@@ -205,8 +205,10 @@ defopts.UseEffectiveRadius      = 'yes                   %';
 defopts.gpCovPrior              = 'iso                  % GP hyper-prior over covariance';
 defopts.gpFixedMean             = 'no';
 defopts.FitLik                  = 'yes                  % Fit the likelihood term';
-defopts.PollAcqFcn              = '@acqNegEI            % Acquisition fcn for poll stage';
-defopts.SearchAcqFcn            = '@acqNegEI            % Acquisition fcn for search stage';
+%defopts.PollAcqFcn              = '@acqNegEI            % Acquisition fcn for poll stage';
+%defopts.SearchAcqFcn            = '@acqNegEI            % Acquisition fcn for search stage';
+defopts.PollAcqFcn              = '{@acqLCB,[]}         % Acquisition fcn for poll stage';
+defopts.SearchAcqFcn            = '{@acqLCB,[]}         % Acquisition fcn for search stage';
 defopts.AcqHedge                = 'off                  % Hedge acquisition function';
 defopts.CholAttempts            = '0                    % Attempts at performing the Cholesky decomposition';
 defopts.NoiseNudge              = '[1 0]                % Increase nudge to noise in case of Cholesky failure';
@@ -1023,15 +1025,20 @@ x = origunits(u,optimState);
 
 % Print final message
 if prnt > 1
-    fprintf('\n%s\n\n', msg);
+    fprintf('\n%s\n', msg);    
+    if optimState.UncertaintyHandling
+        fprintf('Estimated function value at minimum: %g ± %g (mean ± standard deviation).\n\n', fval, fsd);
+    else
+        fprintf('Function value at minimum: %g.\n\n', fval);
+    end
 end
 
 if nargout > 3
     output.function = func2str(fun);    
     if optimState.UncertaintyHandling
-        output.targettype = 'deterministic';
-    else    
         output.targettype = 'stochastic';
+    else    
+        output.targettype = 'deterministic';
     end    
     if all(isinf(LB)) && all(isinf(UB))
         output.problemtype = 'unconstrained';
