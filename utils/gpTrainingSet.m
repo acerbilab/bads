@@ -60,6 +60,35 @@ switch (lower(method))
         
         return;
           
+    case 'nearest' % Add nearest neighbors from incumbent        
+        ug = uc;
+        
+        % Distance between vector and set of reference vectors
+        dist = zeros(size(U,1),size(uc,1));
+        for i = 1:size(ug,1)
+            dist(:,i) = udist(U,ug(i,:),gpstruct.lenscale,optimState);
+        end
+        dist = min(dist,[],2);
+        [distord,ord] = sort(dist,'ascend');
+
+        % Keep only points within a certain (rescaled) radius from target
+        radius = options.gpRadius*gpstruct.effectiveradius;
+        ntrain = min(options.Ndata, sum(distord <= radius^2));
+        
+        % Minimum number of points to keep
+        ntrain = max([options.MinNdata,options.Ndata-options.BufferNdata,ntrain]);
+        
+        % Up to the maximum number of available points
+        ntrain = min(ntrain, optimState.Xmax);
+        
+        % Take points closest to reference points
+        index = 1:ntrain;
+        
+        gpstruct.x = U(ord(index),:);
+        gpstruct.y = Y(ord(index),:);
+        if isfield(optimState,'S'); gpstruct.sd = S(ord(index),:); end
+        
+        
     case 'grid' % Add points closest to coordinate-wise neighbors
                 
         % Add coordinate-wise neighbors to the reference set
