@@ -20,7 +20,7 @@ options = bads('defaults');             % Default options
 %options.Plot = 'profile';               % Show profile during optimization
 
 rng(0);
-[x,fval,exitflag,output,funValues,gpstruct] = bads(fun,x0,LB,UB,PLB,PUB,options);
+[x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PUB,options);
 
 display(['Final value: ' num2str(fval,'%.3f') ' (true value: 0.0), with ' num2str(output.funccount) ' fun evals.']);
 
@@ -37,7 +37,7 @@ options = bads('defaults');             % Default options
 options.NoiseSize = 1;                  % Estimated noise magnitude
 
 rng(0);
-[x,fval,exitflag,output,funValues,gpstruct] = bads(fun,x0,LB,UB,PLB,PUB,options);
+[x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PUB,options);
 
 display(['Final value (not-noisy): ' num2str(sum(x.^2),'%.3f') ' (true value: 0.0) with ' num2str(output.funccount) ' fun evals.']);
 

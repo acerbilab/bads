@@ -3,8 +3,8 @@ function [us,optimState] = searchES(method,sumrule,u,gpstruct,LB,UB,optimState,o
 
 if nargin < 3 || isempty(u) || isempty(gpstruct)
     switch method
-        case 1; us = 'ES-cma';
-        case 2; us = 'ES-coord';
+        case 1; us = 'ES-wcm';
+        case 2; us = 'ES-ell';
         case 3; us = 'ES-eye';
         case 4; us = 'ES-cov';
         case 5; us = 'ES-cma+';
@@ -81,28 +81,28 @@ switch method
         if sumrule; lambda = lambda/sum(lambda); else lambda = lambda/max(lambda); end
 
         % Square root of covariance matrix
-        sigma = diag(sqrt(lambda))*E';
+        sqrtsigma = diag(sqrt(lambda))*E';
 
     case 2
         % Recaled length scale based on gp
         rescaledLenscale = gpstruct.pollscale;
         rescaledLenscale = rescaledLenscale/sqrt(sum(rescaledLenscale.^2));
         if rotategp_flag
-            sigma = gpstruct.Cinv'*diag(rescaledLenscale);
+            sqrtsigma = gpstruct.Cinv'*diag(rescaledLenscale);
         else
-            sigma = diag(rescaledLenscale);
+            sqrtsigma = diag(rescaledLenscale);
         end
 
     case 3  
-        sigma = eye(nvars)/sqrt(nvars);
+        sqrtsigma = eye(nvars)/sqrt(nvars);
         
     case 4
-        sigma = optimState.C';        
+        sqrtsigma = optimState.C';        
 end
 
 
 % Rescale by current scale
-sigma = MeshSize*SearchFactor*sigma;    
+sqrtsigma = MeshSize*SearchFactor*sqrtsigma;    
 
 N = optimState.es.mu;
 
@@ -114,7 +114,7 @@ v = [];
 for i = 1:numel(w); v = [v; w(i)*ones(ns(i),1)]; end
 
 % Initial population
-unew = bsxfun(@plus, u, bsxfun(@times, v, randn(N,nvars)*sigma));
+unew = bsxfun(@plus, u, bsxfun(@times, v, randn(N,nvars)*sqrtsigma));
 
 scale = options.ESstart;
 
@@ -198,7 +198,7 @@ for i = 1:options.Nsearchiter
         es = ESupdate(size(us,1),lambda,optimState.es.iter);        
         ll = min(lambda, size(us,1));
         % xnew = xs(optimState.es.selectmask(1:ll),:) + randn(ll, nvars)*sigma*scale;
-        unew = us(es.selectmask(1:ll),:) + randn(ll, nvars)*sigma*scale;
+        unew = us(es.selectmask(1:ll),:) + randn(ll, nvars)*sqrtsigma*scale;
     end
     
 end

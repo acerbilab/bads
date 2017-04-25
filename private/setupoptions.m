@@ -76,3 +76,8 @@ end
 if options.ImprovementQuantile > 0.5
     warning('OPTIONS.ImprovementQuantile is greater than 0.5. This might produce unpredictable behavior. Set OPTIONS.ImprovementQuantile < 0.5 for conservative improvement.');
 end
+
+if ~isempty(options.NoiseSize) && options.NoiseSize(1) <= 0
+    error('OPTIONS.NoiseSize, if specified, needs to be a positive scalar for numerical stability.');
+end
+    

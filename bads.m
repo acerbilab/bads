@@ -51,6 +51,7 @@ function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PU
 %        iterations: <Total iterations>
 %         funccount: <Total function evaluations>
 %          meshsize: <Mesh size at X>
+%          overhead: <Fractional overhead (total runtime / total fcn time - 1)>
 %          rngstate: <Status of random number generator>
 %         algorithm: <Bayesian adaptive direct search>
 %           message: <BADS termination message>
@@ -104,6 +105,9 @@ function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PU
 % - aggiungi warning se la mesh cerca di espandere oltre MaxPollGridNumber
 %   (sintomo di misspecification dei bound)
 
+%% Start timer
+
+t0 = tic;
 
 %% Basic default options
 
@@ -129,7 +133,7 @@ if nargin < 1 || strcmpi(fun,'defaults')
     return;
 end
 
-%% Advanced options (do not modify unless you know what you are doing)
+%% Advanced options (do not modify unless you *know* what you are doing)
 
 defopts.Plot                    = 'off                  % Show optimization plots ("profile", "scatter", or "off")';
 defopts.Debug                   = 'off                  % Debug mode, plot additional info';
@@ -191,9 +195,9 @@ defopts.Ndata                   = '50 + 10*nvars       % Number of training data
 defopts.MinNdata                = '50                   % Minimum number of training data (doubled under uncertainty)';
 defopts.BufferNdata             = '100                  % Max number of training data removed if too far from current point';
 defopts.gpSamples               = '0                    % Hyperparameters samples (0 = optimize)';
-defopts.MinRefitTime            = '2*nvars              % Minimum fcn evals before refitting the gp';
-defopts.PollTraining            = 'yes                  % Train gp also during poll stage';
-defopts.DoubleRefit             = 'off                  % Try a second fit';
+defopts.MinRefitTime            = '2*nvars              % Minimum fcn evals before refitting the GP';
+defopts.PollTraining            = 'yes                  % Train GP also during poll stage';
+defopts.DoubleRefit             = 'off                  % Always try a second GP fit';
 defopts.gpMeanPercentile        = '90                   % Percentile of empirical GP mean';
 defopts.gpMeanRangeFun          = '@(ym,y) (ym - prctile(y,50))/5*2   % Empirical range of hyperprior over the mean';
 defopts.gpdefFcn                = '{@gpdefBads,''rq'',[1,1]}  % GP definition fcn';
@@ -1010,7 +1014,7 @@ if optimState.UncertaintyHandling && iter > 1
     optimState = reevaluateIterList(optimState,gpstruct,options);
         
     % Order by lowest probabilistic upper bound and choose best iterate
-    SigmaMultiplier = sqrt(2).*erfcinv(2*options.FinalQuantile);
+    SigmaMultiplier = sqrt(2).*erfcinv(2*options.FinalQuantile);    % Using inverted convention
     y = optimState.iterList.fval + SigmaMultiplier*optimState.iterList.fsd;
     [~,index] = min(y);
 
@@ -1048,6 +1052,7 @@ if nargout > 3
     output.iterations = iter;
     output.funccount = optimState.funccount;
     output.meshsize = optimState.meshsize;
+    output.overhead = NaN;
     output.rngstate = rng;
     output.algorithm = 'Bayesian adaptive direct search';
     output.message = msg;
@@ -1059,7 +1064,11 @@ if nargout > 3
     % Return optimization struct (can be reused in future runs)
     if nargout > 4
         [~,optimState] = funlogger(funwrapper,u,optimState,'done');
-    end    
+    end
+    
+    % Compute total running time and fractional overhead
+    optimState.totaltime = toc(t0);    
+    output.overhead = optimState.totaltime / optimState.totalfunevaltime - 1;
 end
 
 end % Main BADS function
@@ -1139,9 +1148,13 @@ else
         error('Quantile Q for robust improvement should be greater than 0 and less than 1.');
     end
     mu = fbase - fnew;
+    
+    %----------------------------------------------------------------------
+    % This needs to be corrected -- but for q=0.5 it does not matter
     sigma = sqrt(sbase.^2 + snew.^2);    
     x0 = -sqrt(2).*erfcinv(2*q);
     z = sigma.*x0 + mu;
+    %----------------------------------------------------------------------
 end
 
 end

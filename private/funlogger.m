@@ -77,6 +77,7 @@ switch lower(state)
             optimState.U = gridunits(optimState.X,optimState);
         end
         optimState.funevaltime = NaN(nmax,1);
+        optimState.totalfunevaltime = 0;
     
     case 'iter' % Evaluate function and store output
 
@@ -120,6 +121,7 @@ switch lower(state)
             optimState.S(optimState.Xn) = fsd;            
         end
         optimState.funevaltime(optimState.Xn) = t;
+        optimState.totalfunevaltime = optimState.totalfunevaltime + t;
         
     case 'done' % Finalize stored table
         

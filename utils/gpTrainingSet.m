@@ -125,6 +125,10 @@ switch (lower(method))
         radius = options.gpRadius*gpstruct.effectiveradius;
         ntrain = min(options.Ndata, sum(distord <= radius^2));
         
+        %------------------------------------------------------------------
+        % Consider rescaling the radius by optimState.meshsize        
+        %------------------------------------------------------------------
+
         % Minimum number of points to keep
         ntrain = max([options.MinNdata,options.Ndata-options.BufferNdata,ntrain]);
         
@@ -395,7 +399,14 @@ if refit_flag
         ll(:,i) = options.gpRescalePoll*gpstruct.hyp(i).cov((1:D)+gpstruct.ncovoffset);
     end    
     ll = exp(sum(bsxfun(@times, gpstruct.hypweight, ll - mean(ll(:))),2))';
-    ll = min(max(ll, optimState.searchmeshsize), (optimState.UB-optimState.LB)./optimState.scale); 
+    
+    % Take bounded limits
+    ub_bounded = optimState.UB;
+    ub_bounded(~isfinite(ub_bounded)) = optimState.PUB(~isfinite(ub_bounded));
+    lb_bounded = optimState.LB;
+    lb_bounded(~isfinite(lb_bounded)) = optimState.PLB(~isfinite(lb_bounded));    
+    
+    ll = min(max(ll, optimState.searchmeshsize), (ub_bounded-lb_bounded)./optimState.scale); % Perhaps this should just be PUB - PLB?
     gpstruct.pollscale = ll;
     
     % GP effective covariance length scale radius
