@@ -1,4 +1,4 @@
-function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PUB,options,varargin)
+function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PUB,nonbcon,options,varargin)
 %BADS Constrained optimization using Bayesian Adaptive Direct Search
 %   BADS attempts to solve problems of the form:
 %       min F(X)  subject to:  LB <= X <= UB
@@ -26,9 +26,16 @@ function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PU
 %   there is > 90% probability that the minimum is found within the box 
 %   (where in doubt, just set PLB=LB and PUB=UB).
 %
-%   X = BADS(FUN,X0,LB,UB,PLB,PUB,options) minimizes with the default 
+%   X = BADS(FUN,X0,LB,UB,PLB,PUB,NONBCON) subjects the minimization to the 
+%   non-bound constraints defined in NONBCON. The function NONBCON accepts 
+%   a N-by-D matrix XI where N is any number of points to evaluate and D is
+%   the number of dimensions, and returns the vector C, representing the
+%   degree of violation of non-bound inequalities for each point in XI. 
+%   BADS minimizes FUN such that C(X)<=0.
+%
+%   X = BADS(FUN,X0,LB,UB,PLB,PUB,NONBCON,options) minimizes with the default 
 %   optimization parameters replaced by values in the structure OPTIONS.
-%   BPS('defaults') returns the default OPTIONS struct.
+%   BADS('defaults') returns the default OPTIONS struct.
 %
 %   [X,FVAL] = BADS(...) returns FVAL, the value of the objective function 
 %   FUN at the solution X. If the target function is stochastic, FVAL is
@@ -88,8 +95,8 @@ function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PU
 %   Author (copyright): Luigi Acerbi, 2017
 %   e-mail: luigi.acerbi@{gmail.com,nyu.edu}
 %   URL: http://luigiacerbi.com
-%   Release date: Apr 04, 2017
-%   Version: 0.9
+%   Release date: Apr 29, 2017
+%   Version: 0.95
 %   References: Check https://github.com/lacerbi/bads
 %--------------------------------------------------------------------------
 
@@ -101,7 +108,6 @@ function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PU
 % - fix restarts e multibayes
 % - compute func running time and do more stuff if func is slow
 % - understand if the warping is working correctly, test moar
-% - testa se la search Hedge è ancora necessaria?
 % - aggiungi warning se la mesh cerca di espandere oltre MaxPollGridNumber
 %   (sintomo di misspecification dei bound)
 
@@ -156,7 +162,6 @@ defopts.CacheSize               = '1e4                  % Size of cache for stor
 defopts.TolImprovement          = '1                    % Minimum significant improvement at unit mesh size';
 defopts.ForcingExponent         = '3/2                  % Exponent of forcing function';
 defopts.PollMeshMultiplier      = '2                    % Mesh multiplicative factor between iterations';
-%defopts.PollMeshMultiplier      = '4                    % Mesh multiplicative factor between iterations';
 defopts.IncumbentSigmaMultiplier = '0.1                 % Multiplier to incumbent uncertainty for acquisition functions';
 defopts.ImprovementQuantile     = '0.5                  % Quantile when computing improvement (<0.5 for conservative improvement)';
 defopts.FinalQuantile           = '1e-3                 % Top quantile when choosing final iteration';
@@ -179,7 +184,6 @@ defopts.SearchScaleIncremental  = '2                    % Search radius expansio
 defopts.SearchScaleFailure      = 'sqrt(0.5)            % Search radius contraction factor for failed search';
 defopts.SearchFactorMin         = '0.5';
 defopts.SearchMethod            = '{@searchHedge,{{@searchES,1,1},{@searchES,2,1}}}  % Search function(s)';
-%defopts.SearchGridNumber        = '5                    % iteration scale factor between poll and search';
 defopts.SearchGridNumber        = '10                   % iteration scale factor between poll and search';
 defopts.MaxPollGridNumber       = '0                    % Maximum poll integer';
 defopts.SearchGridMultiplier    = '2                    % multiplier integer scale factor between poll and search';
@@ -201,7 +205,8 @@ defopts.DoubleRefit             = 'off                  % Always try a second GP
 defopts.gpMeanPercentile        = '90                   % Percentile of empirical GP mean';
 defopts.gpMeanRangeFun          = '@(ym,y) (ym - prctile(y,50))/5*2   % Empirical range of hyperprior over the mean';
 defopts.gpdefFcn                = '{@gpdefBads,''rq'',[1,1]}  % GP definition fcn';
-defopts.gpMethod                = 'grid                 % GP training set selection method';
+defopts.gpMethod                = 'nearest              % GP training set selection method';
+% defopts.gpMethod                = 'grid                 % GP training set selection method';
 defopts.gpCluster               = 'no                   % Cluster additional points during training';
 defopts.RotateGP                = 'no                   % Rotate GP basis';
 defopts.gpRadius                = '3                    % Radius of training set';
@@ -209,10 +214,8 @@ defopts.UseEffectiveRadius      = 'yes                   %';
 defopts.gpCovPrior              = 'iso                  % GP hyper-prior over covariance';
 defopts.gpFixedMean             = 'no';
 defopts.FitLik                  = 'yes                  % Fit the likelihood term';
-defopts.PollAcqFcn              = '@acqNegEI            % Acquisition fcn for poll stage';
-defopts.SearchAcqFcn            = '@acqNegEI            % Acquisition fcn for search stage';
-%defopts.PollAcqFcn              = '{@acqLCB,[]}         % Acquisition fcn for poll stage';
-%defopts.SearchAcqFcn            = '{@acqLCB,[]}         % Acquisition fcn for search stage';
+defopts.PollAcqFcn              = '{@acqLCB,[]}         % Acquisition fcn for poll stage';
+defopts.SearchAcqFcn            = '{@acqLCB,[]}         % Acquisition fcn for search stage';
 defopts.AcqHedge                = 'off                  % Hedge acquisition function';
 defopts.CholAttempts            = '0                    % Attempts at performing the Cholesky decomposition';
 defopts.NoiseNudge              = '[1 0]                % Increase nudge to noise in case of Cholesky failure';
@@ -225,7 +228,6 @@ defopts.TolPoI                  = '1e-6/nvars           % Threshold probability 
 defopts.SkipPoll                = 'yes                  % Skip polling if PoI below threshold, even with no success';
 defopts.ConsecutiveSkipping     = 'yes                  % Allow consecutive incomplete polls';
 defopts.SkipPollAfterSearch     = 'yes                  % Skip polling after successful search';
-% defopts.MinFailedPollSteps      = 'ceil(sqrt(nvars))    % Number of failed fcn evaluations before skipping is allowed';
 defopts.MinFailedPollSteps      = 'Inf                  % Number of failed fcn evaluations before skipping is allowed';
 defopts.NormAlphaLevel          = '1e-6                 % Alpha level for normality test of gp predictions';
 defopts.AccelerateMeshSteps     = '3                    % Accelerate mesh after this number of stalled iterations';
@@ -250,6 +252,26 @@ end
 %% Check that all BADS subfolders are on the MATLAB path
 add2path();
 
+%% Input arguments
+
+if nargin < 3 || isempty(LB); LB = -Inf; end
+if nargin < 4 || isempty(UB); UB = Inf; end
+if nargin < 5; PLB = []; end
+if nargin < 6; PUB = []; end
+if nargin < 7; nonbcon = []; end
+if nargin < 8; options = []; end
+
+% Retro-compatibility with older interface without NONBCON
+if ~isempty(nonbcon) && isstruct(nonbcon)
+    if ~isempty(options)
+        nvarargin = numel(varargin);
+        for i = nvarargin+1:-1:2; varargin{i} = varargin{i-1}; end
+        varargin{1} = options;
+    end
+    options = nonbcon;
+    nonbcon = [];
+end
+
 %% Initialize display printing options
 
 if ~isfield(options,'Display') || isempty(options.Display)
@@ -270,12 +292,6 @@ switch lower(options.Display(1:3))
 end
 
 %% Initialize variables and algorithm structures
-
-if nargin < 3 || isempty(LB); LB = -Inf; end
-if nargin < 4 || isempty(UB); UB = Inf; end
-if nargin < 5; PLB = []; end
-if nargin < 6; PUB = []; end
-if nargin < 7; options = []; end
 
 if isempty(x0)
     if prnt > 2
@@ -311,6 +327,10 @@ else
     funwrapper = @(u_) fun(u_,varargin{:});
 end
 
+% Store constraints function
+if ischar(nonbcon); nonbcon = str2func(nonbcon); end
+optimState.nonbcon = nonbcon;
+
 % Initialize function logger
 [~,optimState] = funlogger([],u0,optimState,'init',options.CacheSize,options.NoiseObj);
 
@@ -322,6 +342,7 @@ optimState.iter = iter;
 % Evaluate starting point and initial mesh, determine if function is noisy
 [u,fval,isFinished_flag,optimState,displayFormat] = ...
     evalinitmesh(u0,funwrapper,optimState,options,prnt);
+if ~isfinite(fval); error('Cannot find valid starting point.'); end
 exitflag = 0;
 msg = 'Optimization terminated: reached maximum number of function evaluations after initialization.';
     
@@ -1044,10 +1065,12 @@ if nargout > 3
     else    
         output.targettype = 'deterministic';
     end    
-    if all(isinf(LB)) && all(isinf(UB))
+    if all(isinf(LB)) && all(isinf(UB)) && isempty(nonbcon)
         output.problemtype = 'unconstrained';
+    elseif isempty(nonbcon)
+        output.problemtype = 'boundconstraints';
     else
-        output.problemtype = 'boundconstraints';        
+        output.problemtype = 'nonboundconstraints';        
     end    
     output.iterations = iter;
     output.funccount = optimState.funccount;
@@ -1055,6 +1078,12 @@ if nargout > 3
     output.overhead = NaN;
     output.rngstate = rng;
     output.algorithm = 'Bayesian adaptive direct search';
+    
+    if ~isempty(optimState.nonbcon)
+        output.maxconstraint = optimState.nonbcon(x);
+    else
+        output.maxconstraint = 0;
+    end
     output.message = msg;
     
     % Return mean and SD of the estimated function value at the optimum

@@ -90,6 +90,11 @@ else
     u0 = force2grid(gridunits(x0,optimState),optimState);
 end
 
+% Test that X0 is within bounds
+if ~all(x0 <= UB & x0 >= LB)
+    error('Initial starting point is not within the hard bounds LB and UB.');
+end
+
 optimState.x0 = x0; % Record starting point (original coordinates)
 optimState.u = u0;
 

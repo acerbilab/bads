@@ -17,8 +17,18 @@ else
     optimState.UncertaintyHandling = options.UncertaintyHandling;
 end
 
+fval = [];
+
+% Evaluate non-bound constraints
+if ~isempty(optimState.nonbcon)
+    c = optimState.nonbcon(optimState.x0);  % Evaluate constraints
+    if c > 0; fval = NaN; end
+end
+
 % Evaluate starting point (if specified)
-[fval,optimState] = funlogger(funwrapper,u0,optimState,'iter');
+if isempty(fval)
+    [fval,optimState] = funlogger(funwrapper,u0,optimState,'iter');
+end
 optimState.fval = fval;
 
 % If UncertaintyHandling is not specified, test if function is noisy
@@ -98,8 +108,6 @@ if options.Ninit > 0
         [fval(i+1),optimState] = funlogger(funwrapper,u1(i,:),optimState,'iter');
     end
 
-    if all(~isfinite(fval)); error('Cannot find valid starting point.'); end
-
     [fval,idx] = min(fval);
     u1 = [u0; u1];
     u = u1(idx,:);
@@ -115,4 +123,5 @@ else
     u = u0;
 end
 
+optimState.fval = fval;
 isFinished = 0;
