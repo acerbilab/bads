@@ -1,4 +1,4 @@
-function hyp = gpHyperOptimize(hyp0,gpstruct,optimtoolbox,options,nudge,removeafter)
+function [hyp,exitflag] = gpHyperOptimize(hyp0,gpstruct,optimtoolbox,options,nudge,removeafter)
 %GPHYPEROPTIMIZE Optimize Gaussian Process hyperparameters.
       
 if nargin < 3; optimtoolbox = 1; end
@@ -41,7 +41,10 @@ lb = LB(~fixed); ub = UB(~fixed);
 fval = zeros(1,numel(hyp0));
 theta = zeros(sum(~fixed),numel(hyp0));
 
-for iRun = 1:numel(hyp0)
+Nruns = numel(hyp0);
+success_vec = zeros(1,Nruns);
+
+for iRun = 1:Nruns
     if iscell(hyp0); hyp = hyp0{iRun}; else hyp = hyp0(iRun); end
     
     % Unwrap starting point, force it to be inside bounds
@@ -58,8 +61,7 @@ for iRun = 1:numel(hyp0)
     theta(:,iRun) = theta0;
     fval(iRun) = f0;
    
-    success = 0;
-    nTry = 10;     % Try up to a hundred times    
+    nTry = 10;     % Try up to ten times    
     noiseNudge = 0;
               
     for iTry = 1:nTry
@@ -97,7 +99,7 @@ for iRun = 1:numel(hyp0)
                 [fval(iRun) fval2]
             end
             
-            success = 1;
+            success_vec(iRun) = 1;
 
             break;
         catch optexc
@@ -172,8 +174,11 @@ for iRun = 1:numel(hyp0)
         end
     end
     
-    if ~success
-        warning(['Failed optimization of hyper-parameters (' num2str(nTry) ' attempts). GP approximation might be unreliable.']);
+    if ~success_vec(iRun)
+        if isfield(options,'gpWarnings') && ~isempty(options.gpWarnings) ...
+                && options.gpWarnings
+            warning(['Failed optimization of hyper-parameters (' num2str(nTry) ' attempts). GP approximation might be unreliable.']);
+        end
         
         if 0
             x1(:,:,1) = gpstruct.x;
@@ -191,6 +196,15 @@ end
 newtheta = unwrap(gpstruct.hyp(1));
 newtheta(~fixed) = theta(:,index);
 hyp = rewrap(gpstruct.hyp(1), newtheta);
+
+% Set EXITFLAG
+if all(success_vec)     % All runs succeded
+    exitflag = 1;    
+elseif any(success_vec) % At least one run succeded
+    exitflag = 0;
+else
+    exitflag = -1;      % All runs failed
+end
 
 % exp(hyp.cov(1:size(gpstruct.x,2)))'
 %hyp.cov(:)'

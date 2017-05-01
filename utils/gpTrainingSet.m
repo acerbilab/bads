@@ -1,4 +1,4 @@
-function gpstruct = gpTrainingSet(gpstruct,method,uc,ui,optimState,options,refit_flag)
+function [gpstruct,exitflag] = gpTrainingSet(gpstruct,method,uc,ui,optimState,options,refit_flag)
 %GPTRAININGSET Update training input set of Gaussian Process.
 %   GPSTRUCT = GPTRAININGSET(GPSTRUCT,'add',UNEW,FVAL,OPTIMSTATE,OPTIONS)
 %   adds point UNEW with function value FVAL to the training set of GP 
@@ -15,8 +15,15 @@ function gpstruct = gpTrainingSet(gpstruct,method,uc,ui,optimState,options,refit
 %
 %   GPSTRUCT = GPTRAININGSET(GPSTRUCT,METHOD,UC,UI,OPTIMSTATE,OPTIONS,1)
 %   also refits the GP hyperparameters on the training set.
+%
+%   [GPSTRUCT,EXITFLAG] = GPTRAININGSET(...) returns an EXITFLAG that 
+%   describes the exit condition of the GP training. A negative EXITFLAG
+%   indicates that the training failed (likely due to error in inverting 
+%   the GP covariance matrix at some point during optimization).
 
-%   Luigi Acerbi 2016
+%   Luigi Acerbi 2017
+
+exitflag = 0;
 
 if nargin < 7 || isempty(refit_flag); refit_flag = false; end
 
@@ -380,7 +387,7 @@ gpstruct = feval(options.gpdefFcn{:},D,gplik,optimState,options,gpstruct);
 % Re-fit Gaussian process (optimize or sample -- only optimization supported)
 if refit_flag
     
-    gpstruct = gpfit(gpstruct,options.gpSamples,options);
+    [gpstruct,exitflag] = gpfit(gpstruct,options.gpSamples,options);
     Nsamples = numel(gpstruct.hyp);
     
     % Gaussian process length scale
@@ -449,6 +456,7 @@ try
 catch
     % Posterior update failed
     gpstruct.post = [];
+    exitflag = -2;
 end
 
 % gpstruct.hyp.cov(:)'
@@ -456,7 +464,7 @@ end
 end
 
 %--------------------------------------------------------------------------
-function gpstruct = gpfit(gpstruct,Nsamples,options)
+function [gpstruct,exitflag] = gpfit(gpstruct,Nsamples,options)
 %GPFIT Fit Gaussian Process hyper-parameters (optimize or sample).
 
 if isfield(gpstruct,'bounds') && ~isempty(gpstruct.bounds)
@@ -506,7 +514,7 @@ else
     gpopt = gpstruct;
 end
 
-hyp = gpHyperOptimize(hyp0,gpopt,options.OptimToolbox,optoptions,options.NoiseNudge,options.RemovePointsAfterTries);     
+[hyp,exitflag] = gpHyperOptimize(hyp0,gpopt,options.OptimToolbox,optoptions,options.NoiseNudge,options.RemovePointsAfterTries);     
 hypw = 1;
 
 % If using multiple samples, do SVGD from neighborhood of the MAP

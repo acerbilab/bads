@@ -129,6 +129,7 @@ defopts.UncertaintyHandling     = '[]           % Explicit noise handling (if em
 defopts.NoiseObj                = 'off          % Objective fcn returns noise estimate as 2nd argument (unsupported)';
 defopts.NoiseSize               = '[]           % Base observation noise magnitude';
 defopts.OptimToolbox            = '[]           % Use Optimization Toolbox (if empty, determine at runtime)';
+defopts.gpWarnings              = 'off          % Issue warning if GP hyperparameters fit fails';
 
 %% If called with no arguments or with 'defaults', return default options
 if nargin < 1 || strcmpi(fun,'defaults')
@@ -393,6 +394,7 @@ iter = 1;
 while ~isFinished_flag
     optimState.iter = iter;
     refitted_flag = false;  % GP refitted this iteration
+    gpexitflag = Inf;       % Exit flag from GP training
     action = [];            % Action performed this iteration (for printing purposes)
                 
     % Compute mesh size and search mesh size
@@ -432,13 +434,15 @@ while ~isFinished_flag
         
         if isempty(gpstruct.post)
             % Local GP approximation on current point
-            gpstruct = gpTrainingSet(gpstruct, ...
+            [gpstruct,gptempflag] = gpTrainingSet(gpstruct, ...
                 options.gpMethod, ...
                 u, ...
                 [], ...    %             [upoll; gridunits(x,optimState)], ...
                 optimState, ...
                 options, ...
                 refitgp_flag);
+                if refitgp_flag; refitted_flag = true; end
+                gpexitflag = min(gptempflag,gpexitflag);
         end
         
         % Update optimization target (based on GP prediction at incumbent)
@@ -741,7 +745,7 @@ while ~isFinished_flag
             
             % Local GP approximation around polled points
             if isempty(gpstruct.post)
-                gpstruct = gpTrainingSet(gpstruct, ...
+                [gpstruct,gptempflag] = gpTrainingSet(gpstruct, ...
                     options.gpMethod, ...
                     u, ...
                     upoll, ...
@@ -749,6 +753,7 @@ while ~isFinished_flag
                     options, ...
                     refitgp_flag);
                 if refitgp_flag; refitted_flag = true; end
+                gpexitflag = min(gptempflag,gpexitflag);
             end
 
             optimState = UpdateTarget(upollbest,fpollhyp,optimState,gpstruct,options);
@@ -924,12 +929,15 @@ while ~isFinished_flag
 
         MeshSize = options.PollMeshMultiplier^MeshSizeInteger;
         optimState.meshsize = MeshSize;
-
+        
         % Print iteration
         if prnt > 2
             if SuccessPoll_flag; string = 'Successful poll'; else string = 'Refine grid'; end
             action = [];
-            if refitted_flag; if isempty(action); action = 'Train'; else action = [action ', train']; end; end            
+            if refitted_flag
+                if isempty(action); action = 'Train'; else action = [action ', train']; end;
+                if gpexitflag < 0; action = [action ' (failed)']; end
+            end
             if lastskipped == iter; if isempty(action); action = 'Skip'; else action = [action ', skip']; end; end
             if optimState.UncertaintyHandling
                 fprintf(displayFormat,iter,optimState.funccount,fval,fsd,MeshSize,string,action);                

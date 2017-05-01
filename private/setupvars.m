@@ -90,8 +90,10 @@ else
     u0 = force2grid(gridunits(x0,optimState),optimState);
 end
 
-% Test that X0 is within bounds
-if ~all(x0 <= UB & x0 >= LB)
+% Test that starting point X0 (U0 in transformed space) is within bounds
+LB_orig = optimState.trinfo.oldbounds.lb;
+UB_orig = optimState.trinfo.oldbounds.ub;
+if ~all(x0 <= UB_orig & x0 >= LB_orig & u0 <= UB & u0 >= LB)
     error('Initial starting point is not within the hard bounds LB and UB.');
 end
 
