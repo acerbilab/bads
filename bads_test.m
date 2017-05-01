@@ -37,6 +37,7 @@ options = bads('defaults');             % Default options
 %options.Plot = 'profile';               % Show profile during optimization
 
 rng(0);
+x0(1:2) = rand(1,2).*(PUB(1:2) - 1) + 1;
 [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PUB,nonbcon,options);
 
 display(['Final value: ' num2str(fval,'%.3f') ' (true value: 1.0), with ' num2str(output.funccount) ' fun evals.']);

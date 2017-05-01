@@ -129,7 +129,6 @@ defopts.UncertaintyHandling     = '[]           % Explicit noise handling (if em
 defopts.NoiseObj                = 'off          % Objective fcn returns noise estimate as 2nd argument (unsupported)';
 defopts.NoiseSize               = '[]           % Base observation noise magnitude';
 defopts.OptimToolbox            = '[]           % Use Optimization Toolbox (if empty, determine at runtime)';
-defopts.gpWarnings              = 'off          % Issue warning if GP hyperparameters fit fails';
 
 %% If called with no arguments or with 'defaults', return default options
 if nargin < 1 || strcmpi(fun,'defaults')
@@ -222,6 +221,7 @@ defopts.CholAttempts            = '0                    % Attempts at performing
 defopts.NoiseNudge              = '[1 0]                % Increase nudge to noise in case of Cholesky failure';
 defopts.RemovePointsAfterTries  = '1                    % Start removing training points after this number of failures';
 defopts.gpSVGDiters             = '200                  % SVGD iterations for GP training';
+defopts.gpWarnings              = 'off          % Issue warning if GP hyperparameters fit fails';
 
 defopts.UncertainIncumbent      = 'yes                  % Treat incumbent as if uncertain regardless of uncertainty handling';
 defopts.MeshNoiseMultiplier     = '0.5                  % Contribution to log noise magnitude from log mesh size (0 for noisy functions)';
