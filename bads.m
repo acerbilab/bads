@@ -225,6 +225,7 @@ defopts.gpWarnings              = 'off          % Issue warning if GP hyperparam
 
 defopts.UncertainIncumbent      = 'yes                  % Treat incumbent as if uncertain regardless of uncertainty handling';
 defopts.MeshNoiseMultiplier     = '0.5                  % Contribution to log noise magnitude from log mesh size (0 for noisy functions)';
+defopts.Nfinalsamples           = '8                    % Additional samples at the end for noisy function';
 defopts.TolPoI                  = '1e-6/nvars           % Threshold probability of improvement (PoI); set to 0 to always complete polling';
 defopts.SkipPoll                = 'yes                  % Skip polling if PoI below threshold, even with no success';
 defopts.ConsecutiveSkipping     = 'yes                  % Allow consecutive incomplete polls';
@@ -341,7 +342,7 @@ iter = 0;
 optimState.iter = iter;
 
 % Evaluate starting point and initial mesh, determine if function is noisy
-[u,fval,isFinished_flag,optimState,displayFormat] = ...
+[u,yval,fval,isFinished_flag,optimState,displayFormat] = ...
     evalinitmesh(u0,funwrapper,optimState,options,prnt);
 if ~isfinite(fval); error('Cannot find valid starting point.'); end
 exitflag = 0;
@@ -356,6 +357,9 @@ if optimState.UncertaintyHandling
     options.MinFailedPollSteps = Inf;
     options.MeshNoiseMultiplier = 0;
     if isempty(options.NoiseSize); options.NoiseSize = 1; end
+    % Keep some function evaluations for the final resampling
+    options.Nfinalsamples = min(options.Nfinalsamples, options.MaxFunEvals - optimState.funccount);
+    options.MaxFunEvals = options.MaxFunEvals - options.Nfinalsamples;
 else
     if isempty(options.NoiseSize); options.NoiseSize = sqrt(options.TolFun); end
 end
@@ -368,7 +372,8 @@ end
 optimState.fsd = fsd;
 
 ubest = u;                      % Current best minumum location
-optimState.usuccess = ubest;    % Store sequence of successful x and y values
+optimState.usuccess = ubest;    % Store sequence of successful x, y, and f values
+optimState.ysuccess = yval;
 optimState.fsuccess = fval;
 optimState.u = u;
 
@@ -531,12 +536,12 @@ while ~isFinished_flag
             usearch = acqu;
             
             % Evaluate function on search point
-            [fsearch,optimState] = funlogger(funwrapper,usearch,optimState,'iter');
+            [ysearch,optimState] = funlogger(funwrapper,usearch,optimState,'iter');
             
             if ~isempty(z)
                 % Save statistics of gp prediction
                 optimState.gpstats = ...
-                    savegpstats(optimState.gpstats,fsearch,ymu(:,index),ys(:,index),gpstruct.hypweight);
+                    savegpstats(optimState.gpstats,ysearch,ymu(:,index),ys(:,index),gpstruct.hypweight);
             end
             
             % Add search point to training set
@@ -544,7 +549,7 @@ while ~isFinished_flag
                 gpstruct = gpTrainingSet(gpstruct, ...
                     'add', ...
                     usearch, ...
-                    fsearch, ...
+                    ysearch, ...
                     optimState, ...
                     options, ...
                     0);
@@ -567,6 +572,7 @@ while ~isFinished_flag
                 end
                 fsearchsd = sqrt(fs2);
             else
+                fsearch = ysearch;
                 fsearchsd = 0;
             end
             
@@ -574,6 +580,7 @@ while ~isFinished_flag
             searchdist = sqrt(udist(ubest,usearch,gpstruct.lenscale,optimState));            
             
         else    % Empty search set
+            ysearch = yval;
             fsearch = fval;
             fsearchsd = 0;
             searchdist = 0;
@@ -606,6 +613,7 @@ while ~isFinished_flag
                 SearchSuccesses = SearchSuccesses + 1;
                 searchstring = ['Successful search (' method ')'];
                 optimState.usuccess = [optimState.usuccess; usearch];
+                optimState.ysuccess = [optimState.ysuccess; ysearch];
                 optimState.fsuccess = [optimState.fsuccess; fsearch];
                 searchstatus = 'success';                
             else
@@ -615,7 +623,7 @@ while ~isFinished_flag
             end
             
             % Update incumbent point
-            [ubest,fval,fsd,optimState,gpstruct] = UpdateIncumbent(ubest,fval,fsd,usearch,fsearch,fsearchsd,optimState,gpstruct,options);
+            [ubest,yval,fval,fsd,optimState,gpstruct] = UpdateIncumbent(ubest,yval,fval,fsd,usearch,ysearch,fsearch,fsearchsd,optimState,gpstruct,options);
             
             if optimState.UncertaintyHandling; gpstruct = gpstructnew; end
             gpstruct.post = []; % Reset posterior
@@ -691,7 +699,8 @@ while ~isFinished_flag
         
         PollBestImprovement = 0;        % Best improvement so far
         upollbest = u;                  % Best poll point
-        fpollbest = fval;               % Objective value at best point
+        ypollbest = yval;               % Observed func value at best point
+        fpollbest = fval;               % Estimated func value at best point
         fpollhyp = fhyp;                % gp hyper-parameters at best point
         fpollbestsd = fsd;              % Uncertainty of objective func
         optimState.pollcount = 0;       % Poll iterations
@@ -814,21 +823,21 @@ while ~isFinished_flag
 
             % Evaluate function and store value
             unew = upoll(index,:);
-            [fpoll,optimState] = funlogger(funwrapper,unew,optimState,'iter');
+            [ypoll,optimState] = funlogger(funwrapper,unew,optimState,'iter');
             
             % Remove polled vector from set
             upoll(index,:) = [];
 
             % Save statistics of gp prediction
             optimState.gpstats = ...
-                savegpstats(optimState.gpstats,fpoll,ymu(:,index),ys(:,index),gpstruct.hypweight);
+                savegpstats(optimState.gpstats,ypoll,ymu(:,index),ys(:,index),gpstruct.hypweight);
             
             if optimState.UncertaintyHandling
                 % Add just polled point to training set
                 gpstruct = gpTrainingSet(gpstruct, ...
                     'add', ...
                     unew, ...
-                    fpoll, ...
+                    ypoll, ...
                     optimState, ...
                     options, ...
                     0);
@@ -841,6 +850,7 @@ while ~isFinished_flag
                 end                
                 fpollsd = sqrt(fs2);
             else
+                fpoll = ypoll;
                 fpollsd = 0;                
             end
             
@@ -850,6 +860,7 @@ while ~isFinished_flag
             % Check if current point improves over best polled point so far
             if PollImprovement > PollBestImprovement 
                 upollbest = unew;
+                ypollbest = ypoll;
                 fpollbest = fpoll;
                 fpollhyp = gpstruct.hyp;
                 fpollbestsd = fpollsd;
@@ -867,7 +878,7 @@ while ~isFinished_flag
         if (PollBestImprovement > 0 && options.SloppyImprovement) || ...
                 PollBestImprovement > SufficientImprovement
             polldirection = find(abs(upollbest - ubest) > 1e-12,1); % The sign can be wrong for periodic variables (unused anyhow)            
-            [ubest,fval,fsd,optimState,gpstruct] = UpdateIncumbent(ubest,fval,fsd,upollbest,fpollbest,fpollbestsd,optimState,gpstruct,options);
+            [ubest,yval,fval,fsd,optimState,gpstruct] = UpdateIncumbent(ubest,yval,fval,fsd,upollbest,ypollbest,fpollbest,fpollbestsd,optimState,gpstruct,options);
             u = ubest;
             pollmoved_flag = true;
         else
@@ -879,6 +890,7 @@ while ~isFinished_flag
             MeshSizeInteger = min(MeshSizeInteger + 1, options.MaxPollGridNumber);
             SuccessPoll_flag = true;
             optimState.usuccess = [optimState.usuccess; ubest];
+            optimState.ysuccess = [optimState.ysuccess; yval];
             optimState.fsuccess = [optimState.fsuccess; fval];
         else
             % Failed poll, decrease mesh size
@@ -995,6 +1007,7 @@ while ~isFinished_flag
     % Store best points at the end of each iteration, or upon termination
     if DoPollStep_flag || isFinished_flag
         optimState.iterList.u(iter,:) = u;
+        optimState.iterList.yval(iter,1) = yval;
         optimState.iterList.fval(iter,1) = fval;
         optimState.iterList.fsd(iter,1) = fsd;
         optimState.iterList.hyp{iter} = gpstruct.hyp;        
@@ -1006,6 +1019,7 @@ while ~isFinished_flag
             optimState = reevaluateIterList(optimState,gpstruct,options);
             
             % Update estimates of incumbent
+            yval = optimState.iterList.yval(iter);
             fval = optimState.iterList.fval(iter);
             fsd = optimState.iterList.fsd(iter);
             fhyp = optimState.iterList.hyp{iter};
@@ -1016,6 +1030,7 @@ while ~isFinished_flag
 
             % Check if any point got better
             if ReImprovement > options.TolFun
+                yval = optimState.iterList.yval(index);
                 fval = optimState.iterList.fval(index);
                 fsd = optimState.iterList.fsd(index);
                 u = optimState.iterList.u(index,:);
@@ -1044,13 +1059,48 @@ if optimState.UncertaintyHandling && iter > 1
         
     % Order by lowest probabilistic upper bound and choose best iterate
     SigmaMultiplier = sqrt(2).*erfcinv(2*options.FinalQuantile);    % Using inverted convention
-    y = optimState.iterList.fval + SigmaMultiplier*optimState.iterList.fsd;
-    [~,index] = min(y);
+    qbeta = optimState.iterList.fval + SigmaMultiplier*optimState.iterList.fsd;
+    [~,index] = min(qbeta);
 
     % Best iterate
+    yval = optimState.iterList.yval(index);
     fval = optimState.iterList.fval(index);
     fsd = optimState.iterList.fsd(index);
     u = optimState.iterList.u(index,:);
+    
+    if options.Nfinalsamples > 0
+        yend(1) = yval;
+        for iSample = 1:options.Nfinalsamples
+            [yend(iSample+1),optimState] = funlogger(funwrapper,u,optimState,'single');
+        end
+
+        % Noise estimate as prior
+        options.NoiseSize(1) = std(yend);
+        gpstruct.prior.lik{1}{2} = log(options.NoiseSize(1));
+        options.NoiseSize(2) = 1/sqrt(2*options.Nfinalsamples);
+        gpstruct.prior.lik{1}{3} = options.NoiseSize(2);
+        options.DoubleRefit = true;
+        gpstruct.bounds.lik{1} = [-Inf, Inf];
+
+        [gpstruct] = gpTrainingSet(gpstruct, ...
+            options.gpMethod, ...
+            u, ...
+            [], ...    %             [upoll; gridunits(x,optimState)], ...
+            optimState, ...
+            options, ...
+            1);
+
+        % Recompute estimated function value at point
+        [~,~,fval,fs2] = gppred(u,gpstruct);
+        if numel(gpstruct.hyp) > 1
+            fval = weightedsum(gpstruct.hypweight,fval,1);
+            fs2 = weightedsum(gpstruct.hypweight,fs2,1);
+        end    
+        fsd = sqrt(fs2);
+
+        optimState.iterList.fval(index) = fval;
+        optimState.iterList.fsd(index) = fsd;
+    end    
 end
 
 % Convert back to original space
@@ -1060,7 +1110,7 @@ x = origunits(u,optimState);
 if prnt > 1
     fprintf('\n%s\n', msg);    
     if optimState.UncertaintyHandling
-        fprintf('Estimated function value at minimum: %g ± %g (mean ± standard deviation).\n\n', fval, fsd);
+        fprintf('Observed function value at minimum: %g. Estimated: %g ± %g (mean ± standard deviation).\n\n', yval, fval, fsd);
     else
         fprintf('Function value at minimum: %g.\n\n', fval);
     end
@@ -1094,6 +1144,9 @@ if nargout > 3
     end
     output.message = msg;
     
+    % Return observed function value at optimum
+    output.yval = yval;
+
     % Return mean and SD of the estimated function value at the optimum
     output.fval = fval;
     output.fsd = fsd;
@@ -1197,10 +1250,11 @@ end
 end
 
 %--------------------------------------------------------------------------
-function [unew,fvalnew,fsdnew,optimState,gpstruct] = UpdateIncumbent(uold,fvalold,fsdold,unew,fvalnew,fsdnew,optimState,gpstruct,options)
+function [unew,yvalnew,fvalnew,fsdnew,optimState,gpstruct] = UpdateIncumbent(uold,yvalold,fvalold,fsdold,unew,yvalnew,fvalnew,fsdnew,optimState,gpstruct,options)
 %UPDATEINCUMENT Move incumbent (current point) to a new point.
 
 optimState.u = unew;
+optimState.yval = yvalnew;
 optimState.fval = fvalnew;
 optimState.fsd = fsdnew;
 
@@ -1316,7 +1370,7 @@ for index = 1:iter
         options, ...
         0);
 
-    % Compute estimated function value at point
+    % Recompute estimated function value at point
     [~,~,fval,fs2] = gppred(ui,gpstruct);
     if numel(gpstruct.hyp) > 1
         fval = weightedsum(gpstruct.hypweight,fval,1);

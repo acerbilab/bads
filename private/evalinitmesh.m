@@ -1,4 +1,4 @@
-function [u,fval,isFinished,optimState,displayFormat] = evalinitmesh(u0,funwrapper,optimState,options,prnt)
+function [u,yval,fval,isFinished,optimState,displayFormat] = evalinitmesh(u0,funwrapper,optimState,options,prnt)
 %EVALINITMESH Evaluate initial mesh.
 
 LB = optimState.LB;
@@ -17,27 +17,29 @@ else
     optimState.UncertaintyHandling = options.UncertaintyHandling;
 end
 
-fval = [];
+yval = [];
 
 % Evaluate non-bound constraints
 if ~isempty(optimState.nonbcon)
     c = optimState.nonbcon(optimState.x0);  % Evaluate constraints
-    if c > 0; fval = NaN; end
+    if c > 0; yval = NaN; end
 end
 
 % Evaluate starting point (if specified)
-if isempty(fval)
-    [fval,optimState] = funlogger(funwrapper,u0,optimState,'iter');
+if isempty(yval)
+    [yval,optimState] = funlogger(funwrapper,u0,optimState,'iter');
 end
+fval = yval;
+optimState.yval = yval;
 optimState.fval = fval;
 
 % If UncertaintyHandling is not specified, test if function is noisy
 if isempty(optimState.UncertaintyHandling)
     uncertaintyTest = 'Uncertainty test';
     x0 = origunits(u0,optimState);
-    fval2 = funwrapper(x0);
+    yval_bis = funwrapper(x0);
     optimState.funccount = optimState.funccount + 1;    % +1 fcn eval to count
-    if abs(fval - fval2) > options.TolNoise
+    if abs(yval - yval_bis) > options.TolNoise
         optimState.UncertaintyHandling = 1;
         if prnt > 0
             fprintf('Beginning optimization of a STOCHASTIC objective fcn.\n');
@@ -67,9 +69,9 @@ end
 
 if prnt > 2
     if optimState.UncertaintyHandling
-        fprintf(displayFormat, 0, optimState.funccount, fval, NaN, MeshSize, '', uncertaintyTest);
+        fprintf(displayFormat, 0, optimState.funccount, yval, NaN, MeshSize, '', uncertaintyTest);
     else
-        fprintf(displayFormat, 0, optimState.funccount, fval, MeshSize, '', uncertaintyTest);
+        fprintf(displayFormat, 0, optimState.funccount, yval, MeshSize, '', uncertaintyTest);
     end
 end
 
@@ -105,23 +107,28 @@ if options.Ninit > 0
 
     % Evaluate all points
     for i = 1:size(u1,1)
-        [fval(i+1),optimState] = funlogger(funwrapper,u1(i,:),optimState,'iter');
+        [yval(i+1),optimState] = funlogger(funwrapper,u1(i,:),optimState,'iter');
     end
 
-    [fval,idx] = min(fval);
+    % Start from minimum (even for a noisy function -- we assume that noise is less than signal)
+    [yval,idx] = min(yval);
     u1 = [u0; u1];
     u = u1(idx,:);
 
     if prnt > 2
         if optimState.UncertaintyHandling
-            fprintf(displayFormat, 0, optimState.funccount, fval, NaN, MeshSize, 'Initial mesh', '');            
+            fprintf(displayFormat, 0, optimState.funccount, yval, NaN, MeshSize, 'Initial mesh', '');            
         else
-            fprintf(displayFormat, 0, optimState.funccount, fval, MeshSize, 'Initial mesh', '');
+            fprintf(displayFormat, 0, optimState.funccount, yval, MeshSize, 'Initial mesh', '');
         end
     end
 else
     u = u0;
 end
 
+% Estimated function value (FVAL and YVAL can differ later)
+fval = yval;
+
+optimState.yval = yval;
 optimState.fval = fval;
 isFinished = 0;

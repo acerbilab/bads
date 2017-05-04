@@ -15,6 +15,9 @@ function [fval,optimState] = funlogger(fun,u,optimState,state,varargin)
 %   the (estimated) SD of the returned value (if heteroskedastic noise
 %   handling is on).
 %
+%   [FVAL,OPTIMSTATE] = FUNLOGGER(FUN,U,OPTIMSTATE,'single') as 'iter' but
+%   does not store function values in the cache.
+%
 %   [~,OPTIMSTATE] = FUNLOGGER(FUN,U,OPTIMSTATE,'done') finalizes stored
 %   function values.
 
@@ -79,7 +82,7 @@ switch lower(state)
         optimState.funevaltime = NaN(nmax,1);
         optimState.totalfunevaltime = 0;
     
-    case 'iter' % Evaluate function and store output
+    case {'iter','single'} % Evaluate function (and store output for 'iter')
 
         x = origunits(u,optimState);    % Convert back to original space
         % Heteroscedastic noise?
@@ -109,18 +112,19 @@ switch lower(state)
             rethrow(fun_error);
         end
         
-
         % Update function records
         optimState.funccount = optimState.funccount + 1;
-        optimState.Xn = max(1,mod(optimState.Xn+1, size(optimState.X,1)));
-        optimState.Xmax = min(optimState.Xmax+1, size(optimState.X,1));
-        optimState.X(optimState.Xn,:) = x;
-        optimState.U(optimState.Xn,:) = u;
-        optimState.Y(optimState.Xn) = fval;
-        if hescnoise
-            optimState.S(optimState.Xn) = fsd;            
+        if strcmpi(state, 'iter')
+            optimState.Xn = max(1,mod(optimState.Xn+1, size(optimState.X,1)));
+            optimState.Xmax = min(optimState.Xmax+1, size(optimState.X,1));
+            optimState.X(optimState.Xn,:) = x;
+            optimState.U(optimState.Xn,:) = u;
+            optimState.Y(optimState.Xn) = fval;
+            if hescnoise
+                optimState.S(optimState.Xn) = fsd;            
+            end
+            optimState.funevaltime(optimState.Xn) = t;
         end
-        optimState.funevaltime(optimState.Xn) = t;
         optimState.totalfunevaltime = optimState.totalfunevaltime + t;
         
     case 'done' % Finalize stored table
