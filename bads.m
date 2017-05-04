@@ -1055,6 +1055,7 @@ while ~isFinished_flag
 end
 
 % Re-evaluate all best points (skip first iteration)
+yval_vec = yval;
 if optimState.UncertaintyHandling && iter > 1    
     optimState = reevaluateIterList(optimState,gpstruct,options);
         
@@ -1071,7 +1072,7 @@ if optimState.UncertaintyHandling && iter > 1
     
     % Re-evaluate estimated function value and SD at final point
     if options.NoiseFinalSamples > 0
-        [fval,fsd,optimState] = FinalEstimate(u,yval,funwrapper,optimState,gpstruct,options);
+        [yval_vec,fval,fsd,optimState] = FinalEstimate(u,yval,funwrapper,optimState,gpstruct,options);
         optimState.iterList.fval(index) = fval;
         optimState.iterList.fsd(index) = fsd;
     end
@@ -1084,7 +1085,11 @@ x = origunits(u,optimState);
 if prnt > 1
     fprintf('\n%s\n', msg);    
     if optimState.UncertaintyHandling
-        fprintf('Observed function value at minimum: %g. Estimated: %g ± %g (mean ± standard error).\n\n', yval, fval, fsd);
+        if numel(yval_vec) == 1 || options.TrustGPfinal
+            fprintf('Observed function value at minimum: %g. Estimated: %g ± %g (mean ± standard error).\n\n', yval_vec(1), fval, fsd);
+        else
+            fprintf('Estimated function value at minimum: %g ± %g (mean ± standard error from %d samples).\n\n', fval, fsd, numel(yval_vec));            
+        end
     else
         fprintf('Function value at minimum: %g.\n\n', fval);
     end
@@ -1118,8 +1123,8 @@ if nargout > 3
     end
     output.message = msg;
     
-    % Return observed function value at optimum
-    output.yval = yval;
+    % Observed function value(s) at optimum (possibly multiple samples)
+    output.yval = yval_vec;
 
     % Return mean and SD of the estimated function value at the optimum
     output.fval = fval;
@@ -1373,19 +1378,20 @@ optimState.UBsearch(optimState.UBsearch > optimState.UB) = ...
 end
 
 %--------------------------------------------------------------------------
-function [fval,fsd,optimState] = FinalEstimate(u,yval,funwrapper,optimState,gpstruct,options)
+function [yval_vec,fval,fsd,optimState] = FinalEstimate(u,yval,funwrapper,optimState,gpstruct,options)
 %FINALESTIMATE Estimate function value and standard deviation at final point.
 
-yend(1) = yval;
+yval_vec = NaN(1,options.NoiseFinalSamples+1);
+yval_vec(1) = yval;
 for iSample = 1:options.NoiseFinalSamples
-    [yend(iSample+1),optimState] = funlogger(funwrapper,u,optimState,'single');
+    [yval_vec(iSample+1),optimState] = funlogger(funwrapper,u,optimState,'single');
 end
 
 if options.TrustGPfinal
     % Compute final estimate based on a refitted GP
         
     % Noise estimate as prior
-    options.NoiseSize(1) = std(yend);
+    options.NoiseSize(1) = std(yval_vec);
     gpstruct.prior.lik{1}{2} = log(options.NoiseSize(1));
     options.NoiseSize(2) = 1/sqrt(2*options.NoiseFinalSamples);
     gpstruct.prior.lik{1}{3} = options.NoiseSize(2);
@@ -1409,8 +1415,8 @@ if options.TrustGPfinal
     fsd = sqrt(fs2);
 else
     % No GP, simple mean and standard error of samples    
-    fval = mean(yend);
-    fsd = std(yend)/sqrt(numel(yend));
+    fval = mean(yval_vec);
+    fsd = std(yval_vec)/sqrt(numel(yval_vec));
 end
 
 end
