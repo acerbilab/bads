@@ -16,8 +16,7 @@ pause;
 fun = @(x) sum((x./(1:numel(x)).^2).^2);     % Objective function
 
 options = bads('defaults');             % Default options
-%options.UncertaintyHandling = 0;        % Deterministic function (determined at runtime if not specified)
-%options.Plot = 'profile';               % Show profile during optimization
+options.UncertaintyHandling = 0;        % Deterministic function (determined at runtime if not specified)
 
 rng(0);
 [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PUB,[],options);
@@ -34,7 +33,6 @@ nonbcon = @(x) x(:,1) + x(:,2) < sqrt(2);     % Non-bound constraints
 
 options = bads('defaults');             % Default options
 %options.UncertaintyHandling = 0;        % Deterministic function (determined at runtime if not specified)
-%options.Plot = 'profile';               % Show profile during optimization
 
 rng(0);
 x0(1:2) = rand(1,2).*(PUB(1:2) - 1) + 1;
@@ -52,11 +50,11 @@ pause;
 fun = @(x) sum(x.^2) + randn();             % Noisy objective function
 
 options = bads('defaults');             % Default options
-%options.Plot = 'profile';              % Show profile during optimization
-%options.UncertaintyHandling = 1;        % Activate noise handling (determined at runtime if not specified)
+options.UncertaintyHandling = 1;        % Activate noise handling (determined at runtime if not specified)
 options.NoiseSize = 1;                  % Estimated noise magnitude
+options.NoiseFinalSamples = 10;         % Samples to estimate FVAL at the end of optimization (10 is default, you might want more)
 
-rng(0);
+rng(1);
 [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PUB,[],options);
 
 display(['Final value (not-noisy): ' num2str(sum(x.^2),'%.3f') ' (true value: 0.0) with ' num2str(output.funccount) ' fun evals.']);

@@ -128,7 +128,7 @@ defopts.AccelerateMesh          = 'on           % Accelerate mesh contraction';
 defopts.UncertaintyHandling     = '[]           % Explicit noise handling (if empty, determine at runtime)';
 defopts.NoiseObj                = 'off          % Objective fcn returns noise estimate as 2nd argument (unsupported)';
 defopts.NoiseSize               = '[]           % Base observation noise magnitude';
-defopts.NoiseFinalSamples       = '15           % Extra samples to estimate FVAL at the end (for noisy objectives)';
+defopts.NoiseFinalSamples       = '10           % Samples to estimate FVAL at the end (for noisy objectives)';
 defopts.OptimToolbox            = '[]           % Use Optimization Toolbox (if empty, determine at runtime)';
 
 %% If called with no arguments or with 'defaults', return default options
@@ -1381,11 +1381,17 @@ end
 function [yval_vec,fval,fsd,optimState] = FinalEstimate(u,yval,funwrapper,optimState,gpstruct,options)
 %FINALESTIMATE Estimate function value and standard deviation at final point.
 
-yval_vec = NaN(1,options.NoiseFinalSamples+1);
-yval_vec(1) = yval;
+% Note that by default we do *not* use YVAL because it is biased 
+% (since it was an incumbent at some iteration, it is more likely to be a 
+% random fluctuation lower than the mean)
+yval_vec = NaN(1,options.NoiseFinalSamples);
 for iSample = 1:options.NoiseFinalSamples
-    [yval_vec(iSample+1),optimState] = funlogger(funwrapper,u,optimState,'single');
+    [yval_vec(iSample),optimState] = funlogger(funwrapper,u,optimState,'single');
 end
+
+% If there is only one sample, exceptionally we use YVAL (this will be 
+% biased but better than having no uncertainty information)
+if numel(yval_vec) == 1; yval_vec = [yval_vec, yval]; end
 
 if options.TrustGPfinal
     % Compute final estimate based on a refitted GP
