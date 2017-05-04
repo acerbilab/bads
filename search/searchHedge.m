@@ -48,7 +48,9 @@ hedge.p = hedge.p*(1-hedge.n*hedge.gamma) + hedge.gamma;
 hedge.chosen = find(rand() < cumsum(hedge.p),1);
 if isempty(hedge.chosen)
     hedge.chosen = randi(nh);
-    warning(['Cannot determine best search function in SEARCHHEDGE (P=' numarray2str(hedge.p) '). Attempting to continue.']);
+    if options.gpWarnings
+        warning(['Cannot determine best search function in SEARCHHEDGE (P=' numarray2str(hedge.p) '). Attempting to continue.']);
+    end
 end
 if hedge.gamma == 0
     hedge.phat = ones(size(hedge.g));

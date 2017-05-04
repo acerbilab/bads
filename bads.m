@@ -2,7 +2,7 @@ function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PU
 %BADS Constrained optimization using Bayesian Adaptive Direct Search
 %   BADS attempts to solve problems of the form:
 %       min F(X)  subject to:  LB <= X <= UB
-%        X
+%        X                        C(X) <= 0        (optional)
 %
 %   X = BADS(FUN,X0,LB,UB) starts at X0 and finds a local minimum X to
 %   the function FUN. FUN accepts input X and returns a scalar function
@@ -128,6 +128,7 @@ defopts.AccelerateMesh          = 'on           % Accelerate mesh contraction';
 defopts.UncertaintyHandling     = '[]           % Explicit noise handling (if empty, determine at runtime)';
 defopts.NoiseObj                = 'off          % Objective fcn returns noise estimate as 2nd argument (unsupported)';
 defopts.NoiseSize               = '[]           % Base observation noise magnitude';
+defopts.NoiseFinalSamples       = '15           % Extra samples to estimate FVAL at the end (for noisy objectives)';
 defopts.OptimToolbox            = '[]           % Use Optimization Toolbox (if empty, determine at runtime)';
 
 %% If called with no arguments or with 'defaults', return default options
@@ -225,7 +226,7 @@ defopts.gpWarnings              = 'off          % Issue warning if GP hyperparam
 
 defopts.UncertainIncumbent      = 'yes                  % Treat incumbent as if uncertain regardless of uncertainty handling';
 defopts.MeshNoiseMultiplier     = '0.5                  % Contribution to log noise magnitude from log mesh size (0 for noisy functions)';
-defopts.Nfinalsamples           = '8                    % Additional samples at the end for noisy function';
+defopts.TrustGPfinal            = 'no                   % Use GP to compute final estimate';
 defopts.TolPoI                  = '1e-6/nvars           % Threshold probability of improvement (PoI); set to 0 to always complete polling';
 defopts.SkipPoll                = 'yes                  % Skip polling if PoI below threshold, even with no success';
 defopts.ConsecutiveSkipping     = 'yes                  % Allow consecutive incomplete polls';
@@ -358,8 +359,8 @@ if optimState.UncertaintyHandling
     options.MeshNoiseMultiplier = 0;
     if isempty(options.NoiseSize); options.NoiseSize = 1; end
     % Keep some function evaluations for the final resampling
-    options.Nfinalsamples = min(options.Nfinalsamples, options.MaxFunEvals - optimState.funccount);
-    options.MaxFunEvals = options.MaxFunEvals - options.Nfinalsamples;
+    options.NoiseFinalSamples = min(options.NoiseFinalSamples, options.MaxFunEvals - optimState.funccount);
+    options.MaxFunEvals = options.MaxFunEvals - options.NoiseFinalSamples;
 else
     if isempty(options.NoiseSize); options.NoiseSize = sqrt(options.TolFun); end
 end
@@ -1068,39 +1069,12 @@ if optimState.UncertaintyHandling && iter > 1
     fsd = optimState.iterList.fsd(index);
     u = optimState.iterList.u(index,:);
     
-    if options.Nfinalsamples > 0
-        yend(1) = yval;
-        for iSample = 1:options.Nfinalsamples
-            [yend(iSample+1),optimState] = funlogger(funwrapper,u,optimState,'single');
-        end
-
-        % Noise estimate as prior
-        options.NoiseSize(1) = std(yend);
-        gpstruct.prior.lik{1}{2} = log(options.NoiseSize(1));
-        options.NoiseSize(2) = 1/sqrt(2*options.Nfinalsamples);
-        gpstruct.prior.lik{1}{3} = options.NoiseSize(2);
-        options.DoubleRefit = true;
-        gpstruct.bounds.lik{1} = [-Inf, Inf];
-
-        [gpstruct] = gpTrainingSet(gpstruct, ...
-            options.gpMethod, ...
-            u, ...
-            [], ...    %             [upoll; gridunits(x,optimState)], ...
-            optimState, ...
-            options, ...
-            1);
-
-        % Recompute estimated function value at point
-        [~,~,fval,fs2] = gppred(u,gpstruct);
-        if numel(gpstruct.hyp) > 1
-            fval = weightedsum(gpstruct.hypweight,fval,1);
-            fs2 = weightedsum(gpstruct.hypweight,fs2,1);
-        end    
-        fsd = sqrt(fs2);
-
+    % Re-evaluate estimated function value and SD at final point
+    if options.NoiseFinalSamples > 0
+        [fval,fsd,optimState] = FinalEstimate(u,yval,funwrapper,optimState,gpstruct,options);
         optimState.iterList.fval(index) = fval;
         optimState.iterList.fsd(index) = fsd;
-    end    
+    end
 end
 
 % Convert back to original space
@@ -1110,7 +1084,7 @@ x = origunits(u,optimState);
 if prnt > 1
     fprintf('\n%s\n', msg);    
     if optimState.UncertaintyHandling
-        fprintf('Observed function value at minimum: %g. Estimated: %g ± %g (mean ± standard deviation).\n\n', yval, fval, fsd);
+        fprintf('Observed function value at minimum: %g. Estimated: %g ± %g (mean ± standard error).\n\n', yval, fval, fsd);
     else
         fprintf('Function value at minimum: %g.\n\n', fval);
     end
@@ -1396,6 +1370,49 @@ optimState.LBsearch(optimState.LBsearch < optimState.LB) = ...
 optimState.UBsearch = force2grid(optimState.UB,optimState);
 optimState.UBsearch(optimState.UBsearch > optimState.UB) = ...
     optimState.UBsearch(optimState.UBsearch > optimState.UB) - optimState.searchmeshsize;
+end
+
+%--------------------------------------------------------------------------
+function [fval,fsd,optimState] = FinalEstimate(u,yval,funwrapper,optimState,gpstruct,options)
+%FINALESTIMATE Estimate function value and standard deviation at final point.
+
+yend(1) = yval;
+for iSample = 1:options.NoiseFinalSamples
+    [yend(iSample+1),optimState] = funlogger(funwrapper,u,optimState,'single');
+end
+
+if options.TrustGPfinal
+    % Compute final estimate based on a refitted GP
+        
+    % Noise estimate as prior
+    options.NoiseSize(1) = std(yend);
+    gpstruct.prior.lik{1}{2} = log(options.NoiseSize(1));
+    options.NoiseSize(2) = 1/sqrt(2*options.NoiseFinalSamples);
+    gpstruct.prior.lik{1}{3} = options.NoiseSize(2);
+    options.DoubleRefit = true;
+    gpstruct.bounds.lik{1} = [-Inf, Inf];
+
+    [gpstruct] = gpTrainingSet(gpstruct, ...
+        options.gpMethod, ...
+        u, ...
+        [], ...    %             [upoll; gridunits(x,optimState)], ...
+        optimState, ...
+        options, ...
+        1);
+
+    % Recompute estimated function value at point
+    [~,~,fval,fs2] = gppred(u,gpstruct);
+    if numel(gpstruct.hyp) > 1
+        fval = weightedsum(gpstruct.hypweight,fval,1);
+        fs2 = weightedsum(gpstruct.hypweight,fs2,1);
+    end    
+    fsd = sqrt(fs2);
+else
+    % No GP, simple mean and standard error of samples    
+    fval = mean(yend);
+    fsd = std(yend)/sqrt(numel(yend));
+end
+
 end
 
 %--------------------------------------------------------------------------
