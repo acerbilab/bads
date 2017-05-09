@@ -1,19 +1,10 @@
-# Poll generating functions
+# Gaussian processes (GP) toolbox functions
 
-The *poll generating function* determines how the polling set is built during the POLL stage.
+This folder contains a number of additional MATLAB functions that extend the [GPML toolbox](http://www.gaussianprocess.org/gpml/code/matlab/doc/) [1].
+Some of these functions are based on the [GPML extensions](https://github.com/rmgarnett/gpml_extensions) by Roman Garnett.
 
-The default poll generating function is set as follows
-
-```
-OPTIONS.PollMethod = @pollMADS2N;
-```
-
-## List of poll generating functions
-
-- `pollMADS2N`: Lower-triangular MADS poll generation function (default), with `2*D` random basis vectors.
-- `pollGPS2N`: Generalized pattern search axis-aligned poll generation function, with `2*D` basis vectors.
+Note that BADS was developed based on the GPML Toolbox v3.6; the more recent v4.0 solves some of the issues that we dealt with here. Future versions of BADS might upgrade to GPML v4.0.
 
 ### References
 
-1. Audet, C., & Dennis Jr, J. E. (2006). Mesh adaptive direct search algorithms for constrained optimization. *SIAM Journal on Optimization*, **17**(1), 188-217. ([link](http://www.caam.rice.edu/caam/trs/2004/TR04-02.pdf))
-2. Kolda, T. G., Lewis, R. M., & Torczon, V. (2003). Optimization by direct search: New perspectives on some classical and modern methods. *SIAM Review*, **45**(3), 385-482. ([link](http://www.cs.wm.edu/~va/research/sirev.pdf))
+1. Rasmussen, C. E., & Nickisch, H. (2010). Gaussian processes for machine learning (GPML) toolbox. *Journal of Machine Learning Research*, 11, 3011-3015. ([link](http://www.jmlr.org/papers/volume11/rasmussen10a/rasmussen10a.pdf))
