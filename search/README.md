@@ -7,6 +7,7 @@ The default in BADS is a *hedging* search, `searchHedge`, that chooses between t
 OPTIONS.SearchMethod = {@searchHedge,{{@searchES,1,1},{@searchES,2,1}}};
 ```
 
+The default SEARCH method has been thoroughly tested, so unless there is a specific rationale we do not recommend to use alternative search functions.
 
 ## List of search functions
 
