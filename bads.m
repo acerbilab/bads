@@ -33,7 +33,7 @@ function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PU
 %   degree of violation of non-bound inequalities for each point in XI. 
 %   BADS minimizes FUN such that C(X)<=0.
 %
-%   X = BADS(FUN,X0,LB,UB,PLB,PUB,NONBCON,options) minimizes with the default 
+%   X = BADS(FUN,X0,LB,UB,PLB,PUB,NONBCON,OPTIONS) minimizes with the default 
 %   optimization parameters replaced by values in the structure OPTIONS.
 %   BADS('defaults') returns the default OPTIONS struct.
 %
@@ -66,14 +66,27 @@ function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PU
 %               fsd: <Estimated standard deviation of function value at X>
 %
 %   [X,FVAL,EXITFLAG,OUTPUT,OPTIMSTATE] = BADS(...) returns a detailed
-%   optimization structure OPTIMSTATE.
+%   optimization structure OPTIMSTATE, mostly for debugging purposes.
 %
 %   [X,FVAL,EXITFLAG,OUTPUT,OPTIMSTATE,GPSTRUCT] = BADS(...) returns the
-%   Gaussian Process structure GPSTRUCT.
+%   Gaussian process (GP) structure GPSTRUCT.
 %
 %   OPTIONS = BADS('defaults') returns a basic default OPTIONS structure.
 %
-%   Optimization of noisy functions:
+%   Examples:
+%    FUN can be a function handle (using @)
+%      X = bads(@rosenbrocks, ...)
+%    In this case, F = rosenbrocks(X) returns the scalar function value F of 
+%    the function evaluated at X.
+%
+%   An example with no hard bounds, only plausible bounds
+%    plb = [-2 -2]; pub = [2 2];
+%    [X,FVAL,EXITFLAG] = bads(@rosenbrocks,[0 0],[],[],plb,pub);
+%
+%     FUN can also be an anonymous function:
+%        X = bads(@(x) 3*sin(x(1))+exp(x(2)),[1 1],[0 0],[pi/2 5])
+%     returns X = [0 0].
+%
 %   To run BADS on a noisy (stochastic) objective function, set
 %       OPTIONS.UncertaintyHandling = 1
 %       OPTIONS.NoiseSize = SIGMA
@@ -84,8 +97,15 @@ function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PU
 %   If OPTIONS.UncertaintyHandling is not specified, BADS will determine at
 %   runtime if the objective function is noisy.
 %
-%   THIS VERSION IS FOR INTERNAL USE ONLY -- PLEASE DO NOT REDISTRIBUTE.
-%   Contact <luigi.acerbi@nyu.edu> for more information.
+%   See BADS_EXAMPLES for more examples. The most recent version of the 
+%   algorithm and additional documentation can be found here:
+%   https://github.com/lacerbi/bads
+%
+%   Reference: Luigi Acerbi and Wei Ji Ma (2017). "Practical Bayesian
+%   Optimization for Model Fitting with Bayesian Adaptive Direct Search",
+%   arXiv preprint, arXiv:YYMM.NNNN.
+%
+%   See also BADS_EXAMPLES, BADS_TEST, @.
 
 %--------------------------------------------------------------------------
 % BADS: Bayesian Adaptive Direct Search for nonlinear function minimization.
@@ -96,20 +116,13 @@ function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PU
 %   e-mail: luigi.acerbi@{gmail.com,nyu.edu}
 %   URL: http://luigiacerbi.com
 %   Release date: Apr 29, 2017
-%   Version: 0.95
+%   Version: 1.0
 %   References: Check https://github.com/lacerbi/bads
 %--------------------------------------------------------------------------
 
-% TO DO:
-% - check options.FunValues provided as argument
-% - play around with OPTIONS.ImprovementQuantile
-% - added retrain at first search step (is it necessary?)
-% - removed added point at the end of poll stage (was it necessary?)
-% - fix restarts e multibayes
-% - compute func running time and do more stuff if func is slow
-% - understand if the warping is working correctly, test moar
-% - aggiungi warning se la mesh cerca di espandere oltre MaxPollGridNumber
-%   (sintomo di misspecification dei bound)
+% Old syntax X = BADS(FUN,X0,LB,UB,PLB,PUB,OPTIONS) should work fine but 
+% users are encouraged to update to new syntax of BADS which takes seventh 
+% argument as NONBCON and OPTIONS is passed as eight argument.
 
 %% Start timer
 
@@ -126,13 +139,12 @@ defopts.NonlinearScaling        = 'on           % Automatic nonlinear rescaling 
 defopts.CompletePoll            = 'off          % Complete polling around the current iterate';
 defopts.AccelerateMesh          = 'on           % Accelerate mesh contraction';
 defopts.UncertaintyHandling     = '[]           % Explicit noise handling (if empty, determine at runtime)';
-defopts.NoiseObj                = 'off          % Objective fcn returns noise estimate as 2nd argument (unsupported)';
 defopts.NoiseSize               = '[]           % Base observation noise magnitude';
 defopts.NoiseFinalSamples       = '10           % Samples to estimate FVAL at the end (for noisy objectives)';
 defopts.OptimToolbox            = '[]           % Use Optimization Toolbox (if empty, determine at runtime)';
 
 %% If called with no arguments or with 'defaults', return default options
-if nargin < 1 || strcmpi(fun,'defaults')
+if nargout <= 1 && (nargin == 0 || nargin == 1 && isequal(fun,'defaults'))
     if nargin < 1
         fprintf('Basic default options returned (type "help bads" for help).\n');
     end
@@ -142,37 +154,46 @@ end
 
 %% Advanced options (do not modify unless you *know* what you are doing)
 
+% Running mode
 defopts.Plot                    = 'off                  % Show optimization plots ("profile", "scatter", or "off")';
 defopts.Debug                   = 'off                  % Debug mode, plot additional info';
+defopts.TrueMinX                = '[]                   % Location of the global minimum (for debug only)';
 
-% Termination conditions
+% Tolerance and termination conditions
 defopts.TolMesh                 = '1e-6                 % Tolerance on mesh size';
 defopts.TolFun                  = '1e-3                 % Min significant change of objective fcn';
 defopts.TolStallIters           = '4 + floor(nvars/2)   % Max iterations with no significant change (doubled under uncertainty)';
 defopts.TolNoise                = 'sqrt(eps)*options.TolFun  % Min variability for a fcn to be considered noisy';
 
+% Initialization
 defopts.Ninit                   = 'nvars                % Number of initial objective fcn evaluations';
 defopts.InitFcn                 = '@initSobol           % Initialization function';
 % defoptions.InitFcn            = '@initLHS';
-defopts.PollMethod              = '@pollMADS2N          % Poll function';
-defopts.Nbasis                  = '200*nvars';
-
 defopts.Restarts                = '0                    % Number of restart attempts';
 defopts.CacheSize               = '1e4                  % Size of cache for storing function evaluations';
 
-defopts.TolImprovement          = '1                    % Minimum significant improvement at unit mesh size';
-defopts.ForcingExponent         = '3/2                  % Exponent of forcing function';
+% Poll options
+defopts.PollMethod              = '@pollMADS2N          % Poll function';
+defopts.Nbasis                  = '200*nvars';
 defopts.PollMeshMultiplier      = '2                    % Mesh multiplicative factor between iterations';
-defopts.IncumbentSigmaMultiplier = '0.1                 % Multiplier to incumbent uncertainty for acquisition functions';
-defopts.ImprovementQuantile     = '0.5                  % Quantile when computing improvement (<0.5 for conservative improvement)';
-defopts.FinalQuantile           = '1e-3                 % Top quantile when choosing final iteration';
 defopts.ForcePollMesh           = 'no                   % Force poll vectors to be on mesh';
-
 defopts.AlternativeIncumbent    = 'off                  % Use alternative incumbent offset';
 defopts.AdaptiveIncumbentShift  = 'off                  % Adaptive multiplier to incumbent uncertainty';
 defopts.gpRescalePoll           = '1                    % GP-based geometric scaling factor of poll vectors';
-defopts.FitnessShaping          = 'off                  % Nonlinear rescaling of objective fcn';
-defopts.WarpFunc                = '0                    % GP warping function type';
+defopts.TolPoI                  = '1e-6/nvars           % Threshold probability of improvement (PoI); set to 0 to always complete polling';
+defopts.SkipPoll                = 'yes                  % Skip polling if PoI below threshold, even with no success';
+defopts.ConsecutiveSkipping     = 'yes                  % Allow consecutive incomplete polls';
+defopts.SkipPollAfterSearch     = 'yes                  % Skip polling after successful search';
+defopts.MinFailedPollSteps      = 'Inf                  % Number of failed fcn evaluations before skipping is allowed';
+defopts.AccelerateMeshSteps     = '3                    % Accelerate mesh after this number of stalled iterations';
+defopts.SloppyImprovement       = 'yes                  % Move incumbent even after insufficient improvement';
+
+% Improvement parameters
+defopts.TolImprovement          = '1                    % Minimum significant improvement at unit mesh size';
+defopts.ForcingExponent         = '3/2                  % Exponent of forcing function';
+defopts.IncumbentSigmaMultiplier = '0.1                 % Multiplier to incumbent uncertainty for acquisition functions';
+defopts.ImprovementQuantile     = '0.5                  % Quantile when computing improvement (<0.5 for conservative improvement)';
+defopts.FinalQuantile           = '1e-3                 % Top quantile when choosing final iteration';
 
 % Search properties
 defopts.Nsearch                 = '2^12                 % Number of candidate search points';
@@ -195,7 +216,7 @@ defopts.SearchMeshExpand        = '0                    % Search-triggered mesh 
 defopts.SearchMeshIncrement     = '1                    % Mesh size increment after search-triggered mesh expansion';
 defopts.SearchOptimize          = 'no                   % Further optimize acquisition function';
 
-% Gaussian Process properties
+% Gaussian process properties
 defopts.Ndata                   = '50 + 10*nvars       % Number of training data (doubled under uncertainty)';
 defopts.MinNdata                = '50                   % Minimum number of training data (doubled under uncertainty)';
 defopts.BufferNdata             = '100                  % Max number of training data removed if too far from current point';
@@ -207,7 +228,6 @@ defopts.gpMeanPercentile        = '90                   % Percentile of empirica
 defopts.gpMeanRangeFun          = '@(ym,y) (ym - prctile(y,50))/5*2   % Empirical range of hyperprior over the mean';
 defopts.gpdefFcn                = '{@gpdefBads,''rq'',[1,1]}  % GP definition fcn';
 defopts.gpMethod                = 'nearest              % GP training set selection method';
-% defopts.gpMethod                = 'grid                 % GP training set selection method';
 defopts.gpCluster               = 'no                   % Cluster additional points during training';
 defopts.RotateGP                = 'no                   % Rotate GP basis';
 defopts.gpRadius                = '3                    % Radius of training set';
@@ -223,27 +243,27 @@ defopts.NoiseNudge              = '[1 0]                % Increase nudge to nois
 defopts.RemovePointsAfterTries  = '1                    % Start removing training points after this number of failures';
 defopts.gpSVGDiters             = '200                  % SVGD iterations for GP training';
 defopts.gpWarnings              = 'off          % Issue warning if GP hyperparameters fit fails';
+defopts.NormAlphaLevel          = '1e-6                 % Alpha level for normality test of gp predictions';
 
+% GP warping parameters (unsupported)
+defopts.FitnessShaping          = 'off                  % Nonlinear rescaling of objective fcn';
+defopts.WarpFunc                = '0                    % GP warping function type';
+
+% Noise parameters
+defopts.NoiseObj                = 'off          % Objective fcn returns noise estimate as 2nd argument (unsupported)';
 defopts.UncertainIncumbent      = 'yes                  % Treat incumbent as if uncertain regardless of uncertainty handling';
 defopts.MeshNoiseMultiplier     = '0.5                  % Contribution to log noise magnitude from log mesh size (0 for noisy functions)';
 defopts.TrustGPfinal            = 'no                   % Use GP to compute final estimate';
-defopts.TolPoI                  = '1e-6/nvars           % Threshold probability of improvement (PoI); set to 0 to always complete polling';
-defopts.SkipPoll                = 'yes                  % Skip polling if PoI below threshold, even with no success';
-defopts.ConsecutiveSkipping     = 'yes                  % Allow consecutive incomplete polls';
-defopts.SkipPollAfterSearch     = 'yes                  % Skip polling after successful search';
-defopts.MinFailedPollSteps      = 'Inf                  % Number of failed fcn evaluations before skipping is allowed';
-defopts.NormAlphaLevel          = '1e-6                 % Alpha level for normality test of gp predictions';
-defopts.AccelerateMeshSteps     = '3                    % Accelerate mesh after this number of stalled iterations';
-defopts.SloppyImprovement       = 'yes                  % Move incumbent even after insufficient improvement';
+
+% Adaptive basis (unsupported)
 defopts.HessianUpdate           = 'no                   % Update Hessian as you go';
 defopts.HessianMethod           = 'bfgs                 % Hessian update method';
 defopts.HessianAlternate        = 'no                   % Alternate Hessian iterations';
 
+% Hedge heuristic parameters (currently used during the search stage)
 defopts.HedgeGamma              = '0.125';
 defopts.HedgeBeta               = '1e-3/options.TolFun';
 defopts.HedgeDecay              = '0.1^(1/(2*nvars))';
-
-defopts.TrueMinX                = '[]                   % Location of the global minimum (for visualization only)';
 
 
 %% If called with 'all', return all default options
@@ -983,12 +1003,12 @@ while ~isFinished_flag
     if optimState.funccount >= options.MaxFunEvals
         isFinished_flag = true;
         exitflag = 0;
-        msg = 'Optimization terminated: reached maximum number of iterations OPTIONS.MaxIter.';
+        msg = 'Optimization terminated: reached maximum number of function evaluations OPTIONS.MaxFunEvals.';
     end
     if iter >= options.MaxIter
         isFinished_flag = true;
         exitflag = 0;
-        msg = 'Optimization terminated: reached maximum number of function evaluations OPTIONS.MaxFunEvals.';
+        msg = 'Optimization terminated: reached maximum number of iterations OPTIONS.MaxIter.';
     end
     if MeshSize < optimState.TolMesh
         isFinished_flag = true;
@@ -1431,7 +1451,8 @@ end
 function add2path()
 %ADD2PATH Adds BADS subfolders to MATLAB path.
 
-subfolders = {'acq','gpdef','gpml_fast','init','poll','search','utils','warp','gpml-matlab-v3.6-2015-07-07'};
+% subfolders = {'acq','gpdef','gpml_fast','init','poll','search','utils','warp','gpml-matlab-v3.6-2015-07-07'};
+subfolders = {'acq','gpdef','gpml_fast','init','poll','search','utils','gpml-matlab-v3.6-2015-07-07'};
 pathCell = regexp(path, pathsep, 'split');
 baseFolder = fileparts(mfilename('fullpath'));
 
@@ -1451,3 +1472,15 @@ if ~onPath
 end
 
 end
+
+% TO DO LIST:
+%--------------------------------------------------------------------------
+% - check options.FunValues provided as argument
+% - play around with OPTIONS.ImprovementQuantile
+% - added retrain at first search step (is it necessary?)
+% - removed added point at the end of poll stage (was it necessary?)
+% - fix restarts and multibayes?
+% - compute func running time and do more stuff if func is slow
+% - understand if the warping is working correctly, test moar
+% - perhaps add warnings if mesh tries to expand beyond MaxPollGridNumber
+%   (probable symptom of bound misspecification)

@@ -1,4 +1,4 @@
-%% Test BADS
+%% Test Bayesian Adaptive Direct Search
 
 rng(0);
 nvars = 6;                              % Number of dimensions
