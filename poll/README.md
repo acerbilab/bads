@@ -1,23 +1,13 @@
-# bads-dev
-Bayesian Adaptive Direct Search - developer's version
+# Poll generating functions
 
+The *poll generating function* determines how the polling set is built during the POLL stage.
 
-### Installation instructions
+## List of poll generating functions
 
-- To install BADS, just clone or unpack the zipped repository where you want it and run the script `install.m`.
-   - This will add the BADS base folder to the MATLAB search path.
-   - No need to install other toolboxes.
-   - BADS automatically handles the rest at runtime.
-- To see if everything works, run `bads_test.m`.
+- `pollMADS2N`: Lower-triangular MADS poll generation function (default), with `2*D` random basis vectors.
+- `pollGPS2N`: Generalized pattern search axis-aligned poll generation function, with `2*D` basis vectors.
 
-### Documentation
+### References
 
-- The BADS interface is similar to that of other MATLAB optimizers, such as `fmincon` and `patternsearch`.
-- If you type `help bads` you will get usage information (to be extended).
-   - You can also check the `bads_test.m` script.
-- If you simply type `bads` you will get a default OPTIONS struct.
-   - These are the OPTIONS you might *sometimes* want to play with (but in general you will be okay with the defaults). 
-   - There are other hidden options which are not recommended for the user to modify.
-- **BADS for noisy problems:** You need to set `OPTIONS.UncertaintyHandling = 1` and `OPTIONS.NoiseSize = sigma`. 
-   - `sigma` is an estimate of the SD of the noise in your problem (it is not limited to this value).
-   - The noise handling part still under testing and improvement.
+1. Audet, C., & Dennis Jr, J. E. (2006). Mesh adaptive direct search algorithms for constrained optimization. *SIAM Journal on Optimization*, **17**(1), 188-217. ([link](http://www.caam.rice.edu/caam/trs/2004/TR04-02.pdf))
+2. Kolda, T. G., Lewis, R. M., & Torczon, V. (2003). Optimization by direct search: New perspectives on some classical and modern methods. *SIAM Review*, **45**(3), 385-482. ([link](http://www.cs.wm.edu/~va/research/sirev.pdf))
