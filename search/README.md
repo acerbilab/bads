@@ -1,23 +1,26 @@
-# bads-dev
-Bayesian Adaptive Direct Search - developer's version
+# Search functions
+
+The *search function* determines how the search is conducted in the SEARCH stage.
+The default in BADS is a *hedging* search, `searchHedge`, that chooses between two kinds of *evolution strategies* inspired search, `searchES` (type 1 and type 2).
+
+```matlab
+OPTIONS.SearchMethod = {@searchHedge,{{@searchES,1,1},{@searchES,2,1}}};
+```
 
 
-### Installation instructions
+## List of search functions
 
-- To install BADS, just clone or unpack the zipped repository where you want it and run the script `install.m`.
-   - This will add the BADS base folder to the MATLAB search path.
-   - No need to install other toolboxes.
-   - BADS automatically handles the rest at runtime.
-- To see if everything works, run `bads_test.m`.
+- `searchHedge`: Meta-search function that chooses probabilistically between other search functions, based on their track record of cumulative improvement, according to the **Hedge** algorithm [1] (default).
+- `searchES`: [Evolution strategies](http://www.scholarpedia.org/article/Evolution_strategies) inspired search, with different subtypes that differ in the way the search covariance matrix is constructed; such as (1) weighted covariance matrix [2]; (2) GP-rescaled diagonal matrix; (3) identity matrix.
+- `searchGauss`: A simple isotropic multivariate normal random search around the current incumbent.
+- `searchWCM`: A single weighted covariance matrix adaptation search step (inspired by CMA-ES [2]).
+- `searchCombine`: Meta-search function that combines multiple search functions, dividing samples among them.
+- `searchOptim`: Local optimization of expected improvement via `fmincon` (deprecated).
+- `searchGrid`: Build space-filling quasi-random grid surrounding the current incumbent.
 
-### Documentation
+Other unlisted search functions are not currently supported.
 
-- The BADS interface is similar to that of other MATLAB optimizers, such as `fmincon` and `patternsearch`.
-- If you type `help bads` you will get usage information (to be extended).
-   - You can also check the `bads_test.m` script.
-- If you simply type `bads` you will get a default OPTIONS struct.
-   - These are the OPTIONS you might *sometimes* want to play with (but in general you will be okay with the defaults). 
-   - There are other hidden options which are not recommended for the user to modify.
-- **BADS for noisy problems:** You need to set `OPTIONS.UncertaintyHandling = 1` and `OPTIONS.NoiseSize = sigma`. 
-   - `sigma` is an estimate of the SD of the noise in your problem (it is not limited to this value).
-   - The noise handling part still under testing and improvement.
+### References
+
+1. Hoffman, M. D., Brochu, E., & de Freitas, N. (2011). Portfolio Allocation for Bayesian Optimization. In *UAI* (pp. 327-336). ([link](https://pdfs.semanticscholar.org/1a7f/d7b566697c9b69e64b27b68db4384314d925.pdf))
+2. Hansen, N., Müller, S. D., & Koumoutsakos, P. (2003). Reducing the time complexity of the derandomized evolution strategy with covariance matrix adaptation (CMA-ES). *Evolutionary Computation*, **11**(1), 1-18. ([link](https://www.lri.fr/~hansen/evco_11_1_1_0.pdf))
