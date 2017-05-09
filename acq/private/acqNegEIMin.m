@@ -1,5 +1,5 @@
 function [z,dz,ymu,ys,fmu,fs,fpi] = acqNegEIMin(eta,xi,target,gpstruct,optimState,grad)
-%ACQNEGEI Acquisition function for (negative) expected improvement.
+%ACQNEGEI Acquisition function for (negative) minimum expected improvement (unsupported).
 
 if nargin < 6 || isempty(grad); grad = 0; end
 if isempty(eta); eta = 0.1; end

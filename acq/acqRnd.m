@@ -10,7 +10,7 @@ if grad == 1 && n > 1
     error('acqRnd:gradient', ...
         'Gradient of acquisition function is provided only at one test point XI (row vector).');
 end
- 
+
 ymu = zeros(Nhyp,n);        % Observed value SD
 ys = zeros(Nhyp,n);         % Observed value SD
 fmu = zeros(Nhyp,n);        % Function mean

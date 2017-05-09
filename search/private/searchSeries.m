@@ -1,5 +1,5 @@
 function xs = searchSeries(x,gpstruct,LB,UB,optimState,options)
-%SEARCHSERIES Search step by time series prediction.
+%SEARCHSERIES Search step by time series prediction (UNSUPPORTED).
 
 if nargin < 1
     xs = 'srs';

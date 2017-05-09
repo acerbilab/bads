@@ -1,12 +1,12 @@
 function [z,dz,ymu,ys,fmu,fs,fpi] = acqNegGEI(xi,target,gpstruct,optimState,grad)
-%ACQNEGEI Acquisition function for (negative) expected squared improvement.
+%ACQNEGEI Acquisition function for (negative) generalized expected improvement (unsupported).
 
 if nargin < 5 || isempty(grad); grad = 0; end
 
 n = size(xi,1);
 
 if grad == 1 && n > 1
-    error('acqNegEI:gradient', ...
+    error('acqNegGEI:gradient', ...
         'Gradient of acquisition function is provided only at one test point XI (row vector).');
 end
 

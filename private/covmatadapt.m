@@ -1,6 +1,8 @@
 function optimState = covmatadapt(u,LB,UB,gpstruct,optimState,options)
 %COVMATADAPT Covariance matrix adaptation (CMA).
 
+% Estimation of local covariance structure (currently unused).
+
 nvars = size(u,2);
 
 cmasearch = searchCMA(1, ...

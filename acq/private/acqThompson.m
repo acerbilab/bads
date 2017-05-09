@@ -1,5 +1,5 @@
 function [z,dz,ymu,ys,fmu,fs,fpi] = acqThompson(xi,target,gpstruct,optimState,grad)
-%ACQNEGPI Acquisition function for (negative) probability of improvement.
+%ACQTHOMPSON Acquisition function for Thompson sampling (not supported).
 
 if nargin < 5 || isempty(grad); grad = 0; end
 

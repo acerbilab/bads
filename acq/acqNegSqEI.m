@@ -6,7 +6,7 @@ if nargin < 5 || isempty(grad_flag); grad_flag = false; end
 n = size(xi,1);
 
 if grad_flag && n > 1
-    error('acqNegEI:gradient', ...
+    error('acqNegSqEI:gradient', ...
         'Gradient of acquisition function is provided only at one test point XI (row vector).');
 end
 
