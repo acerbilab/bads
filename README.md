@@ -26,19 +26,12 @@ The BADS interface is similar to that of other MATLAB optimizers. The basic usag
 ```
 with input parameters:
 - `FUN`, a function handle to the objective function to minimize (typically, the log likelihood of a dataset and model, for a given input parameter vector);
-- `X0`, the starting point of the optimization;
-- `LB` and `UB`, hard bounds (can be `-Inf` and `Inf`);
-- `PLB` and `PUB`, *plausible* bounds, that is where you would expect to find almost all solutions.
+- `X0`, the starting point of the optimization (a row vector);
+- `LB` and `UB`, hard bounds (can contain `-Inf` and `Inf`);
+- `PLB` and `PUB`, *plausible* bounds, that is a box where you would expect to find almost all solutions.
 
 The output parameters are:
 - `X`, the found optimum.
 - `FVAL`, the (estimated) function value at the optimum.
 
-- If you type `help bads` you will get usage information (to be extended).
-   - You can also check the `bads_test.m` script.
-- If you simply type `bads` you will get a default OPTIONS struct.
-   - These are the OPTIONS you might *sometimes* want to play with (but in general you will be okay with the defaults). 
-   - There are other hidden options which are not recommended for the user to modify.
-- **BADS for noisy problems:** You need to set `OPTIONS.UncertaintyHandling = 1` and `OPTIONS.NoiseSize = sigma`. 
-   - `sigma` is an estimate of the SD of the noise in your problem (it is not limited to this value).
-   - The noise handling part still under testing and improvement.
+For more usage examples, see `bads_examples.m`. You can also type `help bads` to see the documentation.
