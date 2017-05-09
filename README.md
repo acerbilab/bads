@@ -1,8 +1,14 @@
-# bads-dev
-Bayesian Adaptive Direct Search - developer's version
+# Bayesian Adaptive Direct Search (BADS)
 
+## What is it
 
-### Installation instructions
+BADS is a plug-and-play optimization algorithm for MATLAB designed to solve difficult optimization problems, in particular related to fitting computational models (e.g., via [maximum likelihood estimation](https://en.wikipedia.org/wiki/Maximum_likelihood_estimation)). BADS is ideal when no gradient information is available, and the objective function is non-analytical or *noisy*, for example evaluated through numerical approximation or via simulation. BADS requires no specific tuning and runs off-the-shelf like other built-in MATLAB optimizers such as `fminsearch`.
+
+## Installation instructions
+
+The source code is currently hosted on GitHub at: http://github.com/lacerbi/bads
+
+[Download the latest version of BADS as ZIP file](https://github.com/lacerbi/bads/archive/master.zip).
 
 - To install BADS, just clone or unpack the zipped repository where you want it and run the script `install.m`.
    - This will add the BADS base folder to the MATLAB search path.
