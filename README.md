@@ -8,7 +8,7 @@ BADS is ideal when no gradient information is available, and the objective funct
 
 BADS requires no specific tuning and runs off-the-shelf like other built-in MATLAB optimizers such as `fminsearch`.
 
-## Installation instructions
+## Installation
 
 The source code is currently hosted on GitHub at: http://github.com/lacerbi/bads
 
@@ -17,9 +17,23 @@ The source code is currently hosted on GitHub at: http://github.com/lacerbi/bads
    - This will add the BADS base folder to the MATLAB search path.
 - To see if everything works, run `bads_test.m`.
 
-### Documentation
+## Usage
 
-- The BADS interface is similar to that of other MATLAB optimizers, such as `fmincon` and `patternsearch`.
+The BADS interface is similar to that of other MATLAB optimizers. The basic usage is:
+
+```matlab
+[X,FVAL] = bads(FUN,X0,LB,UB,PLB,PUB);
+```
+with input parameters:
+- `FUN`, a function handle to the objective function to minimize (typically, the log likelihood of a dataset and model, for a given input parameter vector);
+- `X0`, the starting point of the optimization;
+- `LB` and `UB`, hard bounds (can be `-Inf` and `Inf`);
+- `PLB` and `PUB`, *plausible* bounds, that is where you would expect to find almost all solutions.
+
+The output parameters are:
+- `X`, the found optimum.
+- `FVAL`, the (estimated) function value at the optimum.
+
 - If you type `help bads` you will get usage information (to be extended).
    - You can also check the `bads_test.m` script.
 - If you simply type `bads` you will get a default OPTIONS struct.
