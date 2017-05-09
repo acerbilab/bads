@@ -215,9 +215,10 @@ ub = [Inf 5];               % Hard upper bounds
 % result.
 x0 = plb + (pub-plb).*rand(1,numel(plb));
 
-options = bads('defaults');     % Get a default OPTIONS struct
-options.MaxFunEvals = 50;       % Very low budget of function evaluations
-options.Display     = 'final';  % Print only basic output ('off' turns off)
+options = bads('defaults');             % Get a default OPTIONS struct
+options.MaxFunEvals         = 50;       % Very low budget of function evaluations
+options.Display             = 'final';  % Print only basic output ('off' turns off)
+options.UncertaintyHandling = 0;        % We tell BADS that the objective is deterministic
 
 % Screen display
 fprintf('\n');

@@ -23,6 +23,7 @@ yval = [];
 if ~isempty(optimState.nonbcon)
     c = optimState.nonbcon(optimState.x0);  % Evaluate constraints
     if c > 0; yval = NaN; end
+    if isnan(yval); error('Initial starting point X0 does not satisfy non-bound constraints NONBCON.'); end
 end
 
 % Evaluate starting point (if specified)
