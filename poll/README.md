@@ -2,6 +2,12 @@
 
 The *poll generating function* determines how the polling set is built during the POLL stage.
 
+The default poll generating function is set as follows
+
+```
+OPTIONS.PollMethod = @pollMADS2N;
+```
+
 ## List of poll generating functions
 
 - `pollMADS2N`: Lower-triangular MADS poll generation function (default), with `2*D` random basis vectors.
