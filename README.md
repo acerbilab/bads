@@ -14,7 +14,7 @@ BADS requires no specific tuning and runs off-the-shelf like other built-in MATL
 
 ## Installation
 
-[**Download the latest version of BADS as ZIP file**](https://github.com/lacerbi/bads/archive/master.zip).
+[**Download the latest version of BADS as a ZIP file**](https://github.com/lacerbi/bads/archive/master.zip).
 - To install BADS, clone or unpack the zipped repository where you want it and run the script `install.m`.
    - This will add the BADS base folder to the MATLAB search path.
 - To see if everything works, run `bads('test')`.
