@@ -4,7 +4,7 @@
 
 BADS is a novel, fast Bayesian optimization algorithm for MATLAB designed to solve difficult optimization problems, in particular related to fitting computational models (e.g., via [maximum likelihood estimation](https://en.wikipedia.org/wiki/Maximum_likelihood_estimation)).
 
-In our benchmark on real model-fitting problems, BADS performed on par or better than 15 other common and state-of-the-art MATLAB optimizers, such as `fminsearch`, `fmincon`, and `cmaes` [1].
+In our benchmark on real model-fitting problems, BADS performed on par or better than many other common and state-of-the-art MATLAB optimizers, such as `fminsearch`, `fmincon`, and `cmaes` [1].
 
 BADS is recommended when no gradient information is available, and the objective function is non-analytical or *noisy*, for example evaluated through numerical approximation or via simulation. 
 
@@ -34,11 +34,18 @@ The output parameters are:
 - `X`, the found optimum.
 - `FVAL`, the (estimated) function value at the optimum.
 
-For more usage examples, see [**bads_examples.m**](https://github.com/lacerbi/bads-dev/blob/master/bads_examples.m). You can also type `help bads` to see the documentation.
+For more usage examples, see [**bads_examples.m**](https://github.com/lacerbi/bads-dev/blob/master/bads_examples.m). You can also type `help bads` to display the documentation.
 
 ## How does it work
 
-BO approximates the target function via a Gaussian Process model, and searches the parameter landscape with a trade-off between exploration of uncertain regions and exploitation of promising solutions.
+BADS follows a [mesh adaptive direct search](http://epubs.siam.org/doi/abs/10.1137/040603371) (MADS) procedure for function minimization that alternates **poll** steps and **search** steps (see **Fig 1**). 
+
+- In the **poll** stage, points are evaluated on a mesh by taking steps in one direction at a time, until an improvement is found or all directions have been tried. The step size is doubled in case of success, halved otherwise. 
+- In the **search** stage, a Gaussian process (GP) is fit to a (local) subset of the points evaluated so far. Then, we iteratively choose points to evaluate according to a *lower confidence bound* strategy that trades off between exploration of uncertain regions (high GP uncertainty) and exploitation of promising solutions (low GP mean).
+
+**Fig 1: BADS procedure** ![BADS procedure](https://github.com/lacerbi/bads-dev/blob/master/docs/figures/bads-cartoon.png "Fig 1: BADS procedure")
+
+Adherence to the MADS framework guarrantees convergence to a (local) stationary point under general conditions. The basic scheme is enhanced with heuristics to accelerate the poll step, to update the GP hyper-parameters, to generate a good set of candidate points in the search step, and to deal robustly with noisy functions [1].
 
 This project is under active development. If you find a bug, or anything that needs correction, please let me know.
 
@@ -49,11 +56,11 @@ This project is under active development. If you find a bug, or anything that ne
 
 You can cite BADS in your work with something along the lines of
 
-> We optimized the log likelihoods of our models using Bayesian adaptive direct search (BADS; Acerbi and Ma, 2017). BADS Briefly, BADS alternates between a series of fast, local BO steps (the \search{} stage of MADS) and, when the search repeatedly fails, a systematic, slower exploration of the mesh grid (\poll{} stage). 
+> We optimized the log likelihoods of our models using Bayesian adaptive direct search (BADS; Acerbi and Ma, 2017). BADS alternates between a series of fast, local Bayesian optimization steps and a systematic, slower exploration of a mesh grid. 
 
-If you use BADS, you can demonstrate your appreciation by
+If you use BADS, you can demonstrate your appreciation in the following ways:
 
-- *Starring* the BADS repository on GitHub;
-- Follow me on Twitter for more updates about BADS and other projects I am involved;
-- Cite BADS as
+- Cite BADS as appropriate;
+- *Star* the BADS repository on GitHub;
+- Follow me on Twitter for more updates about BADS and other projects I am involved.
 
