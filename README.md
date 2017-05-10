@@ -61,3 +61,5 @@ Besides formal citations, you can demonstrate your appreciation for BADS in the 
 - *Star* the BADS repository on GitHub;
 - [Follow me on Twitter](https://twitter.com/AcerbiLuigi) for updates about BADS and other projects I am involved;
 - Tell me about your model-fitting problem and your experience with BADS (positive or negative) at <luigi.acerbi@nyu.edu>.
+
+BADS is released under the terms of the [GNU General Public License v3.0](https://github.com/lacerbi/bads-dev/blob/master/LICENSE.txt).
