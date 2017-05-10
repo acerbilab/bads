@@ -45,8 +45,6 @@ BADS follows a [mesh adaptive direct search](http://epubs.siam.org/doi/abs/10.11
 
 **Fig 1: BADS procedure** ![BADS procedure](https://github.com/lacerbi/bads-dev/blob/master/docs/figures/bads-cartoon.png "Fig 1: BADS procedure")
 
-Adherence to the MADS framework guarrantees convergence to a (local) stationary point under general conditions. The basic scheme is enhanced with heuristics to accelerate the poll step, to update the GP hyper-parameters, to generate a good set of candidate points in the search step, and to deal robustly with noisy functions [1].
-
 This project is under active development. If you find a bug, or anything that needs correction, please let me know.
 
 
@@ -60,7 +58,7 @@ You can cite BADS in your work with something along the lines of
 
 If you use BADS, you can demonstrate your appreciation in the following ways:
 
-- Cite BADS as appropriate;
-- *Star* the BADS repository on GitHub;
-- Follow me on Twitter for more updates about BADS and other projects I am involved.
-
+- Cite BADS as appropriate.
+- *Star* the BADS repository on GitHub.
+- [Follow me on Twitter](https://twitter.com/AcerbiLuigi) for updates about BADS and other projects I am involved.
+- Tell me about your model-fitting problem and your experience with BADS (positive or negative) at <luigi.acerbi@nyu.edu>.
