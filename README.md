@@ -2,13 +2,17 @@
 
 ## What is it
 
-BADS is a novel, fast Bayesian optimization algorithm for MATLAB designed to solve difficult optimization problems, in particular related to fitting computational models (e.g., via [maximum likelihood estimation](https://en.wikipedia.org/wiki/Maximum_likelihood_estimation)).
+BADS is a novel, fast Bayesian optimization algorithm designed to solve difficult optimization problems, in particular related to fitting computational models (e.g., via [maximum likelihood estimation](https://en.wikipedia.org/wiki/Maximum_likelihood_estimation)).
+BADS has been intensively tested for fitting behavioral, cognitive, and neural models and is currently being used in more than a dozen projects in [our lab](http://www.cns.nyu.edu/malab/).
 
 In our benchmark on real model-fitting problems, BADS performed on par or better than many other common and state-of-the-art MATLAB optimizers, such as `fminsearch`, `fmincon`, and `cmaes` [1].
 
 BADS is recommended when no gradient information is available, and the objective function is non-analytical or *noisy*, for example evaluated through numerical approximation or via simulation. 
 
 BADS requires no specific tuning and runs off-the-shelf like other built-in MATLAB optimizers such as `fminsearch`.
+
+Please contact <luigi.acerbi@nyu.edu> for more information.
+
 
 ## Installation
 
