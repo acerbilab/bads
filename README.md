@@ -48,7 +48,7 @@ BADS follows a [mesh adaptive direct search](http://epubs.siam.org/doi/abs/10.11
 This project is under active development. If you find a bug, or anything that needs correction, please let me know.
 
 
-### Reference
+## Reference
 
 1. Acerbi, L. & Ma, W. J. (2017). Practical Bayesian Optimization for Model Fitting with Bayesian Adaptive Direct Search. *arXiv preprint*, arXiv:YYMM.NNNN. (link)
 
@@ -56,9 +56,8 @@ You can cite BADS in your work with something along the lines of
 
 > We optimized the log likelihoods of our models using Bayesian adaptive direct search (BADS; Acerbi and Ma, 2017). BADS alternates between a series of fast, local Bayesian optimization steps and a systematic, slower exploration of a mesh grid. 
 
-If you use BADS, you can demonstrate your appreciation in the following ways:
+Besides formal citations, you can demonstrate your appreciation for BADS in the following ways:
 
-- Cite BADS as appropriate.
-- *Star* the BADS repository on GitHub.
-- [Follow me on Twitter](https://twitter.com/AcerbiLuigi) for updates about BADS and other projects I am involved.
+- *Star* the BADS repository on GitHub;
+- [Follow me on Twitter](https://twitter.com/AcerbiLuigi) for updates about BADS and other projects I am involved;
 - Tell me about your model-fitting problem and your experience with BADS (positive or negative) at <luigi.acerbi@nyu.edu>.
