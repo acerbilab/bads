@@ -11,7 +11,7 @@ clear me pathstr
                              
 try
     savepath;                                   % save path
-    display('Installation successful.\n');
+    display('Installation successful.');
 catch
     display('Installation failed: could not save path.');
     display('You need to manually add BADS''s installation folder to your MATLAB search path (and save it).'); 
