@@ -11,8 +11,6 @@ BADS is recommended when no gradient information is available, and the objective
 
 BADS requires no specific tuning and runs off-the-shelf like other built-in MATLAB optimizers such as `fminsearch`.
 
-Please contact <luigi.acerbi@nyu.edu> for more information.
-
 
 ## Installation
 
@@ -65,5 +63,7 @@ Besides formal citations, you can demonstrate your appreciation for BADS in the 
 - *Star* the BADS repository on GitHub;
 - [Follow me on Twitter](https://twitter.com/AcerbiLuigi) for updates about BADS and other projects I am involved;
 - Tell me about your model-fitting problem and your experience with BADS (positive or negative) at <luigi.acerbi@nyu.edu>.
+
+### License
 
 BADS is released under the terms of the [GNU General Public License v3.0](https://github.com/lacerbi/bads/blob/master/LICENSE.txt).
