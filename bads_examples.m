@@ -1,16 +1,23 @@
-%% Examples for Bayesian Adaptive Direct Search
+%BADS_EXAMPLES Examples for Bayesian Adaptive Direct Search
 %
-% Example 1: Basic usage
-% Example 2: Non-bound constraints
-% Example 3: Noisy objective function
-% Example 4: Extra noisy objective function
-% Example 5: Periodic function
-% Example 6: Extended usage
+%  Example 1: Basic usage
+%  Example 2: Non-bound constraints
+%  Example 3: Noisy objective function
+%  Example 4: Extra noisy objective function
+%  Example 5: Periodic function
+%  Example 6: Extended usage
+%
+%  Note: after installation, run 
+%    bads('test') 
+%  to check that everything is working correctly.
+%
+%  See also BADS.
 
 % Luigi Acerbi 2017
 
 display('Running a number of examples usage for Bayesian Adaptive Direct Search (BADS).');
 display('Open ''bads_examples.m'' to see additional comments and instructions.');
+
 
 %% Example 1: Basic usage
 

@@ -1,7 +1,8 @@
-function bads_test()
-%%BADS_TEST Test Bayesian Adaptive Direct Search (BADS).
-%  BADS_TEST executes a few runs of the BADS optimization algorithm to
-%  check that it is installed correctly.
+function failed = runtest()
+%RUNTEST Test Bayesian Adaptive Direct Search (BADS).
+%  RUNTEST executes a few runs of the BADS optimization algorithm to
+%  check that it is installed correctly, and returns the number of failed
+%  tests.
 % 
 %  See also BADS, BADS_EXAMPLES.
 

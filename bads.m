@@ -73,6 +73,9 @@ function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PU
 %
 %   OPTIONS = BADS('defaults') returns a basic default OPTIONS structure.
 %
+%   EXITFLAG = BADS('test') runs a battery of tests. Here EXITFLAG is 0 if
+%   everything works correctly.
+%
 %   Examples:
 %    FUN can be a function handle (using @)
 %      X = bads(@rosenbrocks, ...)
@@ -105,7 +108,7 @@ function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PU
 %   Optimization for Model Fitting with Bayesian Adaptive Direct Search",
 %   arXiv preprint, arXiv:YYMM.NNNN.
 %
-%   See also BADS_EXAMPLES, BADS_TEST, @.
+%   See also BADS_EXAMPLES, @.
 
 %--------------------------------------------------------------------------
 % BADS: Bayesian Adaptive Direct Search for nonlinear function minimization.
@@ -115,9 +118,9 @@ function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PU
 %   Author (copyright): Luigi Acerbi, 2017
 %   e-mail: luigi.acerbi@{gmail.com,nyu.edu}
 %   URL: http://luigiacerbi.com
-%   Release date: Apr 29, 2017
+%   Release date: May 11, 2017
 %   Version: 1.0
-%   References: Check https://github.com/lacerbi/bads
+%   Code repository: https://github.com/lacerbi/bads
 %--------------------------------------------------------------------------
 
 % Old syntax X = BADS(FUN,X0,LB,UB,PLB,PUB,OPTIONS) should work fine but 
@@ -144,11 +147,17 @@ defopts.NoiseFinalSamples       = '10           % Samples to estimate FVAL at th
 defopts.OptimToolbox            = '[]           % Use Optimization Toolbox (if empty, determine at runtime)';
 
 %% If called with no arguments or with 'defaults', return default options
-if nargout <= 1 && (nargin == 0 || nargin == 1 && isequal(fun,'defaults'))
+if nargout <= 1 && (nargin == 0 || (nargin == 1 && ischar(fun) && strcmpi(fun,'defaults')))
     if nargin < 1
         fprintf('Basic default options returned (type "help bads" for help).\n');
     end
     x = defopts;
+    return;
+end
+
+%% If called with one argument which is 'test', run test
+if nargout <= 1 && nargin == 1 && ischar(fun) && strcmpi(fun,'test')
+    x = runtest();
     return;
 end
 
