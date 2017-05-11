@@ -76,8 +76,8 @@ end
 function [exitflag,err] = testblock(fun,truefun,nonbcon,x0,fmin)
 
 nvars = numel(x0);
-LB = -Inf(1,nvars);                     % Lower bound
-UB = Inf(1,nvars);                      % Upper bound
+LB = -100*ones(1,nvars);                % Lower bound
+UB = 100*ones(1,nvars);                 % Upper bound
 PLB = -8*ones(1,nvars);                 % Plausible lower bound
 PUB = 12*ones(1,nvars);                 % Plausible upper bound
 

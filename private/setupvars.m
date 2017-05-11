@@ -41,6 +41,19 @@ if ~all(LB <= PLB & PLB < PUB & PUB <= UB)
     error('Bound vectors do not respect the order: LB <= PLB < PUB <= UB.');
 end
 
+% Gentle warning for infinite bounds
+nInfs = sum(isinf([LB(:);UB(:)]));
+if nInfs > 0
+    if prnt > 0
+        if nInfs == 2*nvars
+            fprintf('Caution: Detected fully unconstrained optimization.\n');
+        else
+            fprintf('Caution: Detected %d infinite bound(s).\n', nInfs);
+        end
+        fprintf('Infinite lower/upper bounds are deprecated. Support might be removed in future versions of BADS.\n\n');
+    end
+end
+
 % Grid parameters
 MeshSizeInteger = 0;        % Mesh size in log base units
 optimState.SearchSizeInteger = min(0,MeshSizeInteger*options.SearchGridMultiplier - options.SearchGridNumber);

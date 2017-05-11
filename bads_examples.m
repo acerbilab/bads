@@ -27,12 +27,13 @@ display('Open ''bads_examples.m'' to see additional comments and instructions.')
 % Simple usage of BADS on Rosenbrock's banana function in 2D
 % (see https://en.wikipedia.org/wiki/Rosenbrock_function).
 % 
-% We set an unconstrained optimization problem (no hard bounds), but we 
-% specify plausible bounds that (hopefully) contain the solution.
-% Plausible bounds represent your best guess at bounding the region where 
-% the solution might lie.
+% We specify wide hard bounds and tighter plausible bounds that (hopefully) 
+% contain the solution. Plausible bounds represent your best guess at 
+% bounding the region where the solution might lie.
 
 x0 = [0 0];                 % Starting point
+lb = [-20 -20];             % Lower bounds
+ub = [20 20];               % Upper bounds
 plb = [-5 -5];              % Plausible lower bounds
 pub = [5 5];                % Plausible upper bounds
 
@@ -44,7 +45,7 @@ display('  Press any key to continue.'); fprintf('\n');
 pause;
 
 % Run BADS, which returns the minimum X and its value FVAL.
-[x,fval] = bads(@rosenbrocks,x0,[],[],plb,pub)
+[x,fval] = bads(@rosenbrocks,x0,lb,ub,plb,pub)
 
 display('The true global minimum is at X = [1,1], where FVAL = 0.');
 
@@ -99,7 +100,7 @@ display('The true global minimum under these constraints is at X = [0.786,0.618]
 noisyfun = @(x) sum(x.^2,2) + randn(size(x,1),1);
 
 x0 = [-3 -3];       % For a change, we start farther away from the solution
-% This time to help the search we set both hard and tighter plausible bounds
+% This time to help the search we set tighter bounds
 lb = [-5 -5];   ub = [5 5];
 plb = [-2 -2];  pub = [2 2];
 
@@ -178,10 +179,9 @@ display('Due to the elevated level of noise, we do not necessarily expect high p
 periodicfun = @(x) rosenbrocks(x(:,1:2)) + cos(x(:,3)*pi/2) + cos(x(:,4)*pi) + 2;
 
 x0 = [-3 -3 -1 -1];
-% We specify the periodic bounds via hard bounds; for the non-periodic
-% variables (1st and 2nd) we use a mix of bound and unconstrained.
-lb = [-Inf -5 -2 -1];
-ub = [5 Inf 2 1];
+% We specify the periodic bounds via hard bounds
+lb = [-10 -5 -2 -1];
+ub = [5 10 2 1];
 
 plb = [-2 -2 -2 -1];
 pub = [2 2 2 1];
@@ -216,8 +216,8 @@ mu = [1 1];
 
 plb = [-2 -2];              % Plausible lower bounds
 pub = [2 2];                % Plausible upper bounds
-lb = [-Inf -5];             % Hard lower bounds
-ub = [Inf 5];               % Hard upper bounds
+lb = [-20 -5];             % Hard lower bounds
+ub = [20 5];               % Hard upper bounds
 
 % Random starting point inside plausible region. In a typical optimization
 % scenario, you will repeat the optimization from different starting

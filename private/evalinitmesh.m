@@ -43,12 +43,12 @@ if isempty(optimState.UncertaintyHandling)
     if abs(yval - yval_bis) > options.TolNoise
         optimState.UncertaintyHandling = 1;
         if prnt > 0
-            fprintf('Beginning optimization of a STOCHASTIC objective fcn.\n');
+            fprintf('Beginning optimization of a STOCHASTIC objective fcn.\n\n');
         end
     else
         optimState.UncertaintyHandling = 0;
-        if prnt > 1
-            fprintf('Beginning optimization of a DETERMINISTIC objective fcn.\n');
+        if prnt > 0
+            fprintf('Beginning optimization of a DETERMINISTIC objective fcn.\n\n');
         end
     end
 else

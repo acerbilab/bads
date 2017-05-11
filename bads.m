@@ -14,8 +14,10 @@ function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PU
 %   replicated in each dimension. Use empty matrices for LB and UB if no 
 %   bounds exist. Set LB(i) = -Inf if X(i) is unbounded below; set 
 %   UB(i) = Inf if X(i) is unbounded above. Note that: 
+%      - unbounded variables are currently supported but deprecated,
+%        support may be removed in future version of BADS;
 %      - if LB and/or UB contain unbounded variables, the respective 
-%        values of PLB and/or PUB need to be specified (see below).
+%        values of PLB and/or PUB need to be specified (see below);
 %      - if X0 is empty, LB and UB need to be specified as vectors.
 %
 %   X = BADS(FUN,X0,LB,UB,PLB,PUB) specifies a set of plausible lower and
