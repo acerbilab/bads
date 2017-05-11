@@ -8,7 +8,7 @@ function [z,nonlinf,nonlinmu,deltay] = fitnessTransform(y)
 
 %hold off;
 %histogram(gpstruct.y,20); drawnow;
-%pp = [prctile(gpstruct.y,0),prctile(gpstruct.y,10),prctile(gpstruct.y,25),prctile(gpstruct.y,50),prctile(gpstruct.y,75),prctile(gpstruct.y,90),prctile(gpstruct.y,100)]
+%pp = [prctile1(gpstruct.y,0),prctile1(gpstruct.y,10),prctile1(gpstruct.y,25),prctile1(gpstruct.y,50),prctile1(gpstruct.y,75),prctile1(gpstruct.y,90),prctile1(gpstruct.y,100)]
 %diff(pp)
 
 % Compute percentiles

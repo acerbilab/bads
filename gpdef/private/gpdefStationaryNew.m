@@ -225,9 +225,9 @@ if isempty(gpstruct)
         
 else    % Update existing gp struct
     
-    ymean = prctile(gpstruct.y,options.gpMeanPercentile); % Write your own function here
-    % yrange = prctile(gpstruct.y,75) - prctile(gpstruct.y,25);
-    % yrange = (ymean - prctile(gpstruct.y,50))/5*2;
+    ymean = prctile1(gpstruct.y,options.gpMeanPercentile); % Write your own function here
+    % yrange = prctile1(gpstruct.y,75) - prctile1(gpstruct.y,25);
+    % yrange = (ymean - prctile1(gpstruct.y,50))/5*2;
     yrange = feval(options.gpMeanRangeFun, ymean, gpstruct.y);
     
     %% Update likelihood
@@ -238,9 +238,9 @@ else    % Update existing gp struct
     % warning('Ho modificato il prior su likelihood in gpdefStationary!');
     
     if options.WarpFunc > 0
-        ywarp = prctile(gpstruct.y,50) + 5*(prctile(gpstruct.y,50) - prctile(gpstruct.y,15.87));
+        ywarp = prctile1(gpstruct.y,50) + 5*(prctile1(gpstruct.y,50) - prctile1(gpstruct.y,15.87));
         % gpstruct.prior.lik{1}{2} = ymean;
-        % yrange = prctile(gpstruct.y,90) - prctile(gpstruct.y,10);
+        % yrange = prctile1(gpstruct.y,90) - prctile1(gpstruct.y,10);
         % yrange = max(gpstruct.y) - min(gpstruct.y);
         % gpstruct.prior.lik{1}{3} = yrange.^2/4;
         %gpstruct.prior.lik{2}{2} = 0; % log(yrange.^2/4);

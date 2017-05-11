@@ -251,4 +251,4 @@ display('EXITFLAG of 0 means that the maximum number of function evaluations has
 fprintf('\n');
 display('For this optimization we used the following OPTIONS:')
 options
-display('Type ''help bads'' for additional documentation on BADS, or consult the <a href="https://github.com/lacerbi/bads">online documentation</a>.');
+display('Type ''help bads'' for additional documentation on BADS, or consult the <a href="https://github.com/lacerbi/bads">Github page</a> or <a href="https://github.com/lacerbi/bads/wiki">online FAQ</a>.');

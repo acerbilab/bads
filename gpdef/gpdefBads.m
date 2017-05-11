@@ -203,7 +203,7 @@ if isempty(gpstruct)
 else    % Update existing GP struct
     
     % We assume that the mean of the GP is higher than what we see
-    ymean = prctile(gpstruct.y,options.gpMeanPercentile); % Write your own function here
+    ymean = prctile1(gpstruct.y,options.gpMeanPercentile);
     yrange = feval(options.gpMeanRangeFun, ymean, gpstruct.y);
     
     %% Update empirical prior for GP likelihood
@@ -213,7 +213,7 @@ else    % Update existing GP struct
     % gpstruct.prior.lik{end}{2} = min(log(TolFun),log(MeshSize));
     
     if options.WarpFunc > 0     % Warped likelihood (unsupported)
-        ywarp = prctile(gpstruct.y,50) + 5*(prctile(gpstruct.y,50) - prctile(gpstruct.y,15.87));        
+        ywarp = prctile1(gpstruct.y,50) + 5*(prctile1(gpstruct.y,50) - prctile1(gpstruct.y,15.87));        
         for i = 1:numel(gpstruct.hyp)
             gpstruct.hyp(i).lik(1) = ywarp;
         end

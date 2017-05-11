@@ -135,7 +135,7 @@ for iRun = 1:Nruns
                     % [~,idx] = max(gpstruct.y);
                 end
                 
-                idx = idx | gpstruct.y > prctile(gpstruct.y,95);
+                idx = idx | gpstruct.y > prctile1(gpstruct.y,95);
                 
                 gpstruct.x(idx,:) = [];
                 gpstruct.y(idx) = [];
