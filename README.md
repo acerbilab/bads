@@ -38,7 +38,7 @@ The output parameters are:
 
 For more usage examples, see [**bads_examples.m**](https://github.com/lacerbi/bads/blob/master/bads_examples.m). You can also type `help bads` to display the documentation.
 
-For any other question, check out the FAQ on the [BADS wiki](https://github.com/lacerbi/bads/wiki).
+For practical recommendations, such as how to set `LB` and `UB`, and any other question, check out the FAQ on the [BADS wiki](https://github.com/lacerbi/bads/wiki).
 
 ## How does it work
 
