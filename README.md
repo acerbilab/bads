@@ -29,7 +29,7 @@ The BADS interface is similar to that of other MATLAB optimizers. The basic usag
 with input parameters:
 - `FUN`, a function handle to the objective function to minimize (typically, the *negative* log likelihood of a dataset and model, for a given input parameter vector);
 - `X0`, the starting point of the optimization (a row vector);
-- `LB` and `UB`, hard lower and upper bounds (can contain `-Inf` and `Inf`);
+- `LB` and `UB`, hard lower and upper bounds;
 - `PLB` and `PUB`, *plausible* lower and upper bounds, that is a box where you would expect to find almost all solutions.
 
 The output parameters are:
