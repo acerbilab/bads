@@ -38,7 +38,7 @@ The output parameters are:
 
 For more usage examples, see [**bads_examples.m**](https://github.com/lacerbi/bads/blob/master/bads_examples.m). You can also type `help bads` to display the documentation.
 
-If you have questions, check out the [BADS wiki](https://github.com/lacerbi/bads/wiki), which contains a FAQ.
+If you have more questions, check out the FAQ on the [BADS wiki](https://github.com/lacerbi/bads/wiki).
 
 ## How does it work
 
@@ -53,7 +53,7 @@ BADS follows a [mesh adaptive direct search](http://epubs.siam.org/doi/abs/10.11
 
 If you have trouble doing something with BADS:
 
-- Check out the [BADS wiki](https://github.com/lacerbi/bads/wiki) and the FAQ.
+- Check out the FAQ on the [BADS wiki](https://github.com/lacerbi/bads/wiki);
 - Contact me at <luigi.acerbi@nyu.edu>, putting 'BADS' in the subject of the email.
 
 This project is under active development. If you find a bug, or anything that needs correction, please let me know.
