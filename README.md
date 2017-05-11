@@ -59,7 +59,7 @@ You can cite BADS in your work with something along the lines of
 Besides formal citations, you can demonstrate your appreciation for BADS in the following ways:
 
 - *Star* the BADS repository on GitHub;
-- [Follow me on Twitter](https://twitter.com/AcerbiLuigi) for updates about BADS and other projects I am involved;
+- [Follow me on Twitter](https://twitter.com/AcerbiLuigi) for updates about BADS and other projects I am involved with;
 - Tell me about your model-fitting problem and your experience with BADS (positive or negative) at <luigi.acerbi@nyu.edu>.
 
 This project is under active development. If you find a bug, or anything that needs correction, please let me know.
