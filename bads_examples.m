@@ -11,6 +11,9 @@
 %    bads('test') 
 %  to check that everything is working correctly.
 %
+%  For any question, check out the FAQ: 
+%  https://github.com/lacerbi/bads/wiki
+%
 %  See also BADS.
 
 % Luigi Acerbi 2017
