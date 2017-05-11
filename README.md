@@ -3,9 +3,9 @@
 ## What is it
 
 BADS is a novel, fast Bayesian optimization algorithm designed to solve difficult optimization problems, in particular related to fitting computational models (e.g., via [maximum likelihood estimation](https://en.wikipedia.org/wiki/Maximum_likelihood_estimation)).
-BADS has been intensively tested for fitting behavioral, cognitive, and neural models and is currently being used in more than a dozen projects in [our lab](http://www.cns.nyu.edu/malab/).
 
-In our benchmark on real model-fitting problems, BADS performed on par or better than many other common and state-of-the-art MATLAB optimizers, such as `fminsearch`, `fmincon`, and `cmaes` [1].
+BADS has been intensively tested for fitting behavioral, cognitive, and neural models and is currently being used in more than a dozen projects in [our lab](http://www.cns.nyu.edu/malab/).
+In our benchmark with real model-fitting problems, BADS performed on par or better than many other common and state-of-the-art MATLAB optimizers, such as `fminsearch`, `fmincon`, and `cmaes` [1].
 
 BADS is recommended when no gradient information is available, and the objective function is non-analytical or *noisy*, for example evaluated through numerical approximation or via simulation. 
 
@@ -14,7 +14,7 @@ BADS requires no specific tuning and runs off-the-shelf like other built-in MATL
 
 ## Installation
 
-[**Download the latest version of BADS as ZIP file**](https://github.com/lacerbi/bads/archive/master.zip).
+[**Download the latest version of BADS as a ZIP file**](https://github.com/lacerbi/bads/archive/master.zip).
 - To install BADS, clone or unpack the zipped repository where you want it and run the script `install.m`.
    - This will add the BADS base folder to the MATLAB search path.
 - To see if everything works, run `bads('test')`.
@@ -47,8 +47,6 @@ BADS follows a [mesh adaptive direct search](http://epubs.siam.org/doi/abs/10.11
 
 **Fig 1: BADS procedure** ![BADS procedure](https://github.com/lacerbi/bads/blob/master/docs/figures/bads-cartoon.png "Fig 1: BADS procedure")
 
-This project is under active development. If you find a bug, or anything that needs correction, please let me know.
-
 
 ## Reference
 
@@ -63,6 +61,8 @@ Besides formal citations, you can demonstrate your appreciation for BADS in the 
 - *Star* the BADS repository on GitHub;
 - [Follow me on Twitter](https://twitter.com/AcerbiLuigi) for updates about BADS and other projects I am involved;
 - Tell me about your model-fitting problem and your experience with BADS (positive or negative) at <luigi.acerbi@nyu.edu>.
+
+This project is under active development. If you find a bug, or anything that needs correction, please let me know.
 
 ### License
 
