@@ -1103,10 +1103,13 @@ if optimState.UncertaintyHandling && iter > 1
     u = optimState.iterList.u(index,:);
     
     % Re-evaluate estimated function value and SD at final point
-    if options.NoiseFinalSamples > 0
-        [yval_vec,fval,fsd,optimState] = FinalEstimate(u,yval,funwrapper,optimState,gpstruct,options);
-        optimState.iterList.fval(index) = fval;
-        optimState.iterList.fsd(index) = fsd;
+    % (only if FUN is returned)
+    if nargout > 1
+        if options.NoiseFinalSamples > 0
+            [yval_vec,fval,fsd,optimState] = FinalEstimate(u,yval,funwrapper,optimState,gpstruct,options);
+            optimState.iterList.fval(index) = fval;
+            optimState.iterList.fsd(index) = fsd;
+        end
     end
 end
 
@@ -1117,10 +1120,10 @@ x = origunits(u,optimState);
 if prnt > 1
     fprintf('\n%s\n', msg);    
     if optimState.UncertaintyHandling
-        if numel(yval_vec) == 1 || options.TrustGPfinal
-            fprintf('Observed function value at minimum: %g. Estimated: %g ± %g (mean ± standard error).\n\n', yval_vec(1), fval, fsd);
+        if options.TrustGPfinal || numel(yval_vec) == 1
+            fprintf('Observed function value at minimum: %g (1 sample). Estimated: %g ± %g (GP mean ± SEM).\n\n', yval_vec(1), fval, fsd);
         else
-            fprintf('Estimated function value at minimum: %g ± %g (mean ± standard error from %d samples).\n\n', fval, fsd, numel(yval_vec));            
+            fprintf('Estimated function value at minimum: %g ± %g (mean ± SEM from %d samples).\n\n', fval, fsd, numel(yval_vec));            
         end
     else
         fprintf('Function value at minimum: %g.\n\n', fval);
