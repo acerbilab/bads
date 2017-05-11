@@ -38,6 +38,8 @@ The output parameters are:
 
 For more usage examples, see [**bads_examples.m**](https://github.com/lacerbi/bads/blob/master/bads_examples.m). You can also type `help bads` to display the documentation.
 
+If you have questions, check out the [BADS wiki](https://github.com/lacerbi/bads/wiki), which contains a FAQ.
+
 ## How does it work
 
 BADS follows a [mesh adaptive direct search](http://epubs.siam.org/doi/abs/10.1137/040603371) (MADS) procedure for function minimization that alternates **poll** steps and **search** steps (see **Fig 1**). 
@@ -47,6 +49,14 @@ BADS follows a [mesh adaptive direct search](http://epubs.siam.org/doi/abs/10.11
 
 **Fig 1: BADS procedure** ![BADS procedure](https://github.com/lacerbi/bads/blob/master/docs/bads-cartoon.png "Fig 1: BADS procedure")
 
+## Troubleshooting
+
+If you have trouble doing something with BADS:
+
+- Check out the [BADS wiki](https://github.com/lacerbi/bads/wiki) and the FAQ.
+- Contact me at <luigi.acerbi@nyu.edu>, putting 'BADS' in the subject of the email.
+
+This project is under active development. If you find a bug, or anything that needs correction, please let me know.
 
 ## Reference
 
@@ -60,9 +70,7 @@ Besides formal citations, you can demonstrate your appreciation for BADS in the 
 
 - *Star* the BADS repository on GitHub;
 - [Follow me on Twitter](https://twitter.com/AcerbiLuigi) for updates about BADS and other projects I am involved with;
-- Tell me about your model-fitting problem and your experience with BADS (positive or negative) at <luigi.acerbi@nyu.edu>.
-
-This project is under active development. If you find a bug, or anything that needs correction, please let me know.
+- Tell me about your model-fitting problem and your experience with BADS (positive or negative) at <luigi.acerbi@nyu.edu> (putting  'BADS' in the subject of the email).
 
 ### License
 
