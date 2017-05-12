@@ -230,7 +230,7 @@ x0 = plb + (pub-plb).*rand(1,numel(plb));
 
 options = bads('defaults');             % Get a default OPTIONS struct
 options.MaxFunEvals         = 50;       % Very low budget of function evaluations
-options.Display             = 'final';  % Print only basic output ('off' turns off)
+options.Display             = 'final';   % Print only basic output ('off' turns off)
 options.UncertaintyHandling = 0;        % We tell BADS that the objective is deterministic
 
 % Screen display
@@ -241,7 +241,7 @@ display('  Press any key to continue.'); fprintf('\n');
 pause;
 
 % Run BADS, passing MU as additional (fixed) input argument for FUN
-[x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,lb,ub,plb,pub,[],options,mu);
+[x,fval,exitflag,output] = bads(fun,x0,lb,ub,plb,pub,[],options,mu);
 
 % The following line of code would do the same using an anonymous function
 % [x,fval,exitflag] = bads(@(x) fun(x,mu),x0,lb,ub,plb,pub,[],options);

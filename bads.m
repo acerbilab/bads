@@ -735,7 +735,10 @@ while ~isFinished_flag
                 DoPollStep_flag = false;
                 SearchSpree = SearchSpree + 1;
                 if options.SearchMeshExpand > 0 && ...
-                        mod(SearchSpree,options.SearchMeshExpand) == 0
+                        mod(SearchSpree,options.SearchMeshExpand) == 0 && ...
+                        options.SearchMeshIncrement > 0
+                    % Check if mesh size is already maximal
+                    optimState = meshOverflowCheck(MeshSizeInteger,optimState,options);                    
                     MeshSizeInteger = min(MeshSizeInteger + options.SearchMeshIncrement, options.MaxPollGridNumber);
                 end
             else
@@ -943,7 +946,10 @@ while ~isFinished_flag
             pollmoved_flag = false;
         end
 
-        if PollBestImprovement > SufficientImprovement
+        if PollBestImprovement > SufficientImprovement            
+            % Check if mesh size is already maximal
+            optimState = meshOverflowCheck(MeshSizeInteger,optimState,options);
+            
             % Successful poll, increase mesh size
             MeshSizeInteger = min(MeshSizeInteger + 1, options.MaxPollGridNumber);
             SuccessPoll_flag = true;
@@ -1435,6 +1441,20 @@ optimState.LBsearch(optimState.LBsearch < optimState.LB) = ...
 optimState.UBsearch = force2grid(optimState.UB,optimState);
 optimState.UBsearch(optimState.UBsearch > optimState.UB) = ...
     optimState.UBsearch(optimState.UBsearch > optimState.UB) - optimState.searchmeshsize;
+end
+
+%--------------------------------------------------------------------------
+function optimState = meshOverflowCheck(MeshSizeInteger,optimState,options)
+%MESHOVERFLOWCHECK Check if mesh is expanding when already at max size.            
+
+nvars = numel(optimState.x0);
+
+if MeshSizeInteger == options.MaxPollGridNumber
+    optimState.meshoverflows = optimState.meshoverflows + 1;
+    if optimState.meshoverflows == ceil(sqrt(nvars))
+        warning('The mesh attempted to expand above maximum size too many times. Expand PLB/PUB.');
+    end
+end
 end
 
 %--------------------------------------------------------------------------

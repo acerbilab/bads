@@ -167,6 +167,7 @@ optimState.sdlevel      = options.IncumbentSigmaMultiplier;
 optimState.searchcount  = options.SearchNtry;       % Skip search at first iteration
 optimState.lastreeval   = -Inf;                     % Last time function values were re-evaluated
 optimState.lastfitgp    = -Inf;                     % Last fcn evaluation for which the gp was trained
+optimState.meshoverflows = 0;                       % Number of attempted mesh expansions when already at maximum size
 
 % List of points at the end of each iteration
 optimState.iterList.u = [];
