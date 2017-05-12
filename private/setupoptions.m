@@ -42,7 +42,7 @@ for f = evalfields
             try
                 options.(f{:}) = evalbool(options.(f{:}));
             catch
-                error('bps:init', ...
+                error('bads:init', ...
                     'Cannot evaluate OPTIONS field "%s".', f{:});
             end
         end

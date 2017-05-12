@@ -212,12 +212,15 @@ display('The true global minimum is at X = [1,1,±2,±1], where FVAL = 0.');
 fun = @(x,mu) rosenbrocks(bsxfun(@plus, x, mu)); 
 
 % This will translate the Rosenbrock fcn such that the global minimum is at zero
-mu = [1 1];
+mu = [1 1 1 1];
 
-plb = [-2 -2];              % Plausible lower bounds
-pub = [2 2];                % Plausible upper bounds
-lb = [-20 -5];             % Hard lower bounds
-ub = [20 5];               % Hard upper bounds
+% We now set bounds using also fixed variables
+% (2nd and 4th variable are fixed by setting all bounds and X0 equal)
+
+plb = [-2 0 -2 0];             % Plausible lower bounds
+pub = [2 0 2 0];               % Plausible upper bounds
+lb = [-20 0 -5 0];             % Hard lower bounds
+ub = [20 0 5 0];               % Hard upper bounds
 
 % Random starting point inside plausible region. In a typical optimization
 % scenario, you will repeat the optimization from different starting
@@ -238,14 +241,14 @@ display('  Press any key to continue.'); fprintf('\n');
 pause;
 
 % Run BADS, passing MU as additional (fixed) input argument for FUN
-[x,fval,exitflag,output] = bads(fun,x0,lb,ub,plb,pub,[],options,mu);
+[x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,lb,ub,plb,pub,[],options,mu);
 
 % The following line of code would do the same using an anonymous function
 % [x,fval,exitflag] = bads(@(x) fun(x,mu),x0,lb,ub,plb,pub,[],options);
 
 x
 fval
-display('The true global minimum is at X = [0,0], where FVAL = 0.');
+display('The true global minimum is at X = [0,0,0,0], where FVAL = 0.');
 exitflag
 display('EXITFLAG of 0 means that the maximum number of function evaluations has been reached.');
 fprintf('\n');

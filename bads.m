@@ -21,12 +21,16 @@ function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PU
 %      - if X0 is empty, LB and UB need to be specified as vectors.
 %
 %   X = BADS(FUN,X0,LB,UB,PLB,PUB) specifies a set of plausible lower and
-%   upper bounds such that LB <= PLB <= X0 <= PUB <= UB. Both PLB and PUB
+%   upper bounds such that LB <= PLB < PUB <= UB. Both PLB and PUB
 %   need to be finite. PLB and PUB are used to design the initial mesh of 
 %   the direct search, and represent a plausible range for the 
 %   optimization variables. As a rule of thumb, set PLB and PUB such that 
 %   there is > 90% probability that the minimum is found within the box 
 %   (where in doubt, just set PLB=LB and PUB=UB).
+%   As an exception to the strict bound ordering provided above, BADS accepts 
+%   'fixed' variables such that X0(i),LB(i),UB(i),PLB(i),PUB(i) are all 
+%   equal, in which case the fixed variables take constant values, and 
+%   BADS runs on a problem with reduced dimensionality.
 %
 %   X = BADS(FUN,X0,LB,UB,PLB,PUB,NONBCON) subjects the minimization to the 
 %   non-bound constraints defined in NONBCON. The function NONBCON accepts 
@@ -139,7 +143,6 @@ t0 = tic;
 defopts.Display                 = 'iter         % Level of display ("iter", "notify", "final", or "off")';
 defopts.MaxIter                 = '200*nvars    % Max number of iterations';
 defopts.MaxFunEvals             = '500*nvars    % Max number of objective fcn evaluations';
-defopts.FunValues               = '[]           % Struct with pregress fcn evaluations (X and Y fields)';
 defopts.PeriodicVars            = '[]           % Array with indices of periodic variables';
 defopts.NonlinearScaling        = 'on           % Automatic nonlinear rescaling of variables';
 defopts.CompletePoll            = 'off          % Complete polling around the current iterate';
@@ -183,6 +186,7 @@ defopts.InitFcn                 = '@initSobol           % Initialization functio
 % defoptions.InitFcn            = '@initLHS';
 defopts.Restarts                = '0                    % Number of restart attempts';
 defopts.CacheSize               = '1e4                  % Size of cache for storing function evaluations';
+defopts.FunValues               = '[]                   % Struct with pregress fcn evaluations (X and Y fields)';
 
 % Poll options
 defopts.PollMethod              = '@pollMADS2N          % Poll function';
@@ -343,6 +347,27 @@ end
 
 nvars = numel(x0);
 optimState = [];
+
+% Check boundaries and if there are fixed variables
+[LB,UB,PLB,PUB,fixidx] = boundscheck(x0,LB,UB,PLB,PUB);
+
+% If there are fixed variables, rerun BADS with lowered dimensionality
+if any(fixidx)
+    fixedvars = LB(fixidx);
+    if isempty(varargin)
+        fun_fix = @(x) fun(expandvars(x,fixidx,fixedvars));
+    else
+        fun_fix = @(x) fun(expandvars(x,fixidx,fixedvars),varargin{:});        
+    end
+    if ~isempty(nonbcon)
+        nonbcon_fix = @(x) nonbcon(expandvars(x,fixidx,fixedvars));
+    else
+        nonbcon_fix = [];
+    end    
+    % Run of BADS with lowered dimensionality
+    [x,fval,exitflag,output,optimState,gpstruct] = fixedbads(fun_fix,x0,LB,UB,PLB,PUB,nonbcon_fix,options,fixidx,nargout);            
+    return;
+end
 
 % Setup algorithm options
 options = setupoptions(nvars,defopts,options);    
@@ -1461,6 +1486,18 @@ else
 end
 
 end
+
+%--------------------------------------------------------------------------
+function xprime = expandvars(x,fixidx,fixvals)
+%EXPANDVARS Expand fixed variables.
+
+n = size(x,1);
+xprime = zeros(n, size(x,2) + numel(fixvals));
+xprime(:,~fixidx) = x;
+xprime(:,fixidx) = repmat(fixvals, [n 1]);
+
+end
+
 
 %--------------------------------------------------------------------------
 function add2path()
