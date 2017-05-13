@@ -1,5 +1,5 @@
 Bayesian Adaptive Direct Search (BADS) documentation
-========================================================================================
+==========================================================================================
 
 For a description of the usage of BADS, type
 
@@ -7,7 +7,7 @@ For a description of the usage of BADS, type
 
 in the MATLAB shell.
 
-You can also look up 'bads_examples.m', which is extensively commented.
+You can also look up the 'bads_examples.m' script, for many extensively commented examples.
 
 For any other question, clarification, or troubleshooting, check out the BADS online FAQ:
 
