@@ -1,5 +1,5 @@
 Bayesian Adaptive Direct Search (BADS) documentation
-==========================================================================================
+==============================================================================================
 
 For a description of the usage of BADS, type
 
@@ -13,7 +13,7 @@ For any other question, clarification, or troubleshooting, check out the BADS on
 
 https://github.com/lacerbi/bads/wiki
 
-==========================================================================================
+==============================================================================================
 
 The algorithm is described in the following reference:
 
