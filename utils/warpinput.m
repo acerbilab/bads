@@ -8,7 +8,8 @@ nvars = size(optimState.U,2);
 gplik = [];
 covtype = 'matern5';
 covextras = 1;
-gpstruct = gpdefBads(covtype,covextras,nvars,gplik,optimState,options);
+gpstruct = gpdefWarp(covtype,covextras,nvars,gplik,optimState,options);
+options.gpdefFcn = {@gpdefWarp,covtype,covextras};
 u0 = optimState.U(1,:);
 [gpstruct,exitflag] = gpTrainingSet(gpstruct,'all',u0,[],optimState,options,1);
 
@@ -16,7 +17,7 @@ u0 = optimState.U(1,:);
 gpstruct.inpwarp.type = 1;
 gpstruct.inpwarp.params = zeros(1,nvars*2);
 gpstruct.inpwarp.prior.mu = zeros(1,nvars*2);
-gpstruct.inpwarp.prior.sigma = 0.25*ones(1,nvars*2);
+gpstruct.inpwarp.prior.sigma = 0.5*ones(1,nvars*2);
 gpstruct.inpwarp.bounds.lb = -3*ones(1,nvars*2);
 gpstruct.inpwarp.bounds.ub = 3*ones(1,nvars*2);
 
