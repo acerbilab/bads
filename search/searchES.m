@@ -34,6 +34,16 @@ rotategp_flag = isfield(gpstruct,'C') && ~isempty(gpstruct.C);
 U = gpstruct.x;
 Y = gpstruct.y;
 
+% Input warping?
+if isfield(gpstruct,'inpwarp') && ~isempty(gpstruct.inpwarp)
+    % Kumaraswmi parameters
+    a = exp(gpstruct.inpwarp.params(1:2:end));
+    b = exp(gpstruct.inpwarp.params(2:2:end));
+
+    % Warp inputs
+    u = uWarp(u,a,b,gpstruct.LB,gpstruct.UB,'direct');
+end
+
 nvars = length(u);
 
 switch method
@@ -124,6 +134,10 @@ lambda = optimState.es.lambda;
 % Loop over evolutionary strategies iterations
 for i = 1:options.Nsearchiter
     
+    if isfield(gpstruct,'inpwarp') && ~isempty(gpstruct.inpwarp)
+        unew = uWarp(unew,a,b,gpstruct.LB,gpstruct.UB,'inverse');
+    end
+    
     % Enforce periodicity
     unew = periodCheck(unew,LB,UB,optimState);
     
@@ -163,6 +177,10 @@ for i = 1:options.Nsearchiter
             zold = feval(options.SearchAcqFcn{:},us,optimState.ftarget,gpstruct,optimState,0);
         end
     end
+    
+    if isfield(gpstruct,'inpwarp') && ~isempty(gpstruct.inpwarp)
+        unew = uWarp(unew,a,b,gpstruct.LB,gpstruct.UB,'direct');
+    end    
     
     % Something went wrong, random search
     if isempty(z); z = rand(size(unew,1),1); end
@@ -207,5 +225,9 @@ end
 
 % Return best
 if ~isempty(us); us = us(1,:); end
+
+if isfield(gpstruct,'inpwarp') && ~isempty(gpstruct.inpwarp)
+    us = uWarp(us,a,b,gpstruct.LB,gpstruct.UB,'inverse');
+end
 
 end

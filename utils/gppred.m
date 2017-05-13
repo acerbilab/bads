@@ -10,6 +10,16 @@ Nhyp = numel(gpstruct.hyp);     % Number of hyper-parameter samples
 % Requesting gp gradient?
 compute_grad = nargout > 5;
 
+% Input warping?
+if isfield(gpstruct,'inpwarp') && ~isempty(gpstruct.inpwarp)
+    % Kumaraswmi parameters
+    a = exp(gpstruct.inpwarp.params(1:2:end));
+    b = exp(gpstruct.inpwarp.params(2:2:end));
+
+    % Warp inputs
+    xi = uWarp(xi,a,b,gpstruct.LB,gpstruct.UB);
+end
+
 % Rotate test input?
 rotategp_flag = isfield(gpstruct,'C') && ~isempty(gpstruct.C); 
 if rotategp_flag

@@ -260,6 +260,7 @@ defopts.RemovePointsAfterTries  = '1                    % Start removing trainin
 defopts.gpSVGDiters             = '200                  % SVGD iterations for GP training';
 defopts.gpWarnings              = 'off          % Issue warning if GP hyperparameters fit fails';
 defopts.NormAlphaLevel          = '1e-6                 % Alpha level for normality test of gp predictions';
+defopts.InputWarping            = 'off                  % GP nonlinear input warping';
 
 % GP warping parameters (unsupported)
 defopts.FitnessShaping          = 'off                  % Nonlinear rescaling of objective fcn';
@@ -1030,7 +1031,28 @@ while ~isFinished_flag
     end % Poll stage
 
     % Moved during the poll stage, need to retrain the GP
-    if pollmoved_flag; gpstruct.post = []; end    
+    if pollmoved_flag; gpstruct.post = []; end
+    
+    %----------------------------------------------------------------------
+    % Input warping (experimental feature)
+    if (options.InputWarping) && ...
+            optimState.funccount >= min(nvars*50,200) && ~isfield(gpstruct,'inpwarp')
+        % Compute input warping
+        gpstruct.inpwarp = warpinput(optimState,options);
+        gpstruct.LB = optimState.LB;
+        gpstruct.UB = optimState.UB;
+        gpstruct.post = [];
+        % Retrain GP
+        [gpstruct] = gpTrainingSet(gpstruct, ...
+            options.gpMethod, ...
+            u, ...
+            [], ...
+            optimState, ...
+            options, ...
+            1);
+        refitted_flag = true;
+    end
+    %----------------------------------------------------------------------
     
     %----------------------------------------------------------------------
     %% Finalize iteration

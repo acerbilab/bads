@@ -32,6 +32,20 @@ U = optimState.U(index,:);
 Y = optimState.Y(index);
 if isfield(optimState,'S'); S = optimState.S(index); end
 D = numel(uc);
+
+if isfield(gpstruct,'inpwarp') && ~isempty(gpstruct.inpwarp)
+    % Kumaraswmi parameters
+    a = exp(gpstruct.inpwarp.params(1:2:end));
+    b = exp(gpstruct.inpwarp.params(2:2:end));
+
+    % Warp inputs
+    U = uWarp(U,a,b,optimState.LB,optimState.UB);
+    uc = uWarp(uc,a,b,optimState.LB,optimState.UB);    
+    if ~isempty(ui)
+        ui = uWarp(ui,a,b,optimState.LB,optimState.UB);
+    end    
+end
+
 rotategp_flag = isfield(gpstruct,'C') && ~isempty(gpstruct.C);
 
 switch (lower(method))
@@ -165,6 +179,13 @@ switch (lower(method))
         gpstruct.x = U(ord(index),:);
         gpstruct.y = Y(ord(index),:);
         if isfield(optimState,'S'); gpstruct.sd = S(ord(index),:); end
+        
+    case 'all' % Add all points to training set        
+        
+        gpstruct.x = U;
+        gpstruct.y = Y;
+        if isfield(optimState,'S'); gpstruct.sd = S; end
+        
         
     %----------------------------------------------------------------------    
     case 'covgrid'
