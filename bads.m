@@ -203,6 +203,7 @@ defopts.SkipPollAfterSearch     = 'yes                  % Skip polling after suc
 defopts.MinFailedPollSteps      = 'Inf                  % Number of failed fcn evaluations before skipping is allowed';
 defopts.AccelerateMeshSteps     = '3                    % Accelerate mesh after this number of stalled iterations';
 defopts.SloppyImprovement       = 'yes                  % Move incumbent even after insufficient improvement';
+defopts.MeshOverflowsWarning    = '2 + nvars/2          % Threshold # mesh overflows for warning'; 
 
 % Improvement parameters
 defopts.TolImprovement          = '1                    % Minimum significant improvement at unit mesh size';
@@ -411,6 +412,7 @@ if optimState.UncertaintyHandling
     options.TolStallIters = 2*options.TolStallIters;
     options.Ndata = max(200,options.Ndata);
     options.MinNdata = 2*options.MinNdata;
+    options.MeshOverflowsWarning = 2*options.MeshOverflowsWarning;
     %options.gpMeanPercentile = 50;
     options.MinFailedPollSteps = Inf;
     options.MeshNoiseMultiplier = 0;
@@ -1451,8 +1453,8 @@ nvars = numel(optimState.x0);
 
 if MeshSizeInteger == options.MaxPollGridNumber
     optimState.meshoverflows = optimState.meshoverflows + 1;
-    if optimState.meshoverflows == ceil(sqrt(nvars))
-        warning('The mesh attempted to expand above maximum size too many times. Expand PLB/PUB.');
+    if optimState.meshoverflows == ceil(options.MeshOverflowsWarning)
+        warning('The mesh attempted to expand above maximum size too many times. Try widening PLB and PUB.');
     end
 end
 end
