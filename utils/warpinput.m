@@ -32,8 +32,12 @@ xbase = gpstruct.x;
 for i = 1:3
     theta0 = gpstruct.inpwarp.params;
     gpstruct.x = xbase;
-    theta = fmincon(@(x) warp_optimizer(x, gpstruct),theta0,[],[],[],[],gpstruct.inpwarp.bounds.lb,gpstruct.inpwarp.bounds.ub,[],optoptions);
-    gpstruct.inpwarp.params = theta;
+    try
+        theta = fmincon(@(x) warp_optimizer(x, gpstruct),theta0,[],[],[],[],gpstruct.inpwarp.bounds.lb,gpstruct.inpwarp.bounds.ub,[],optoptions);
+        gpstruct.inpwarp.params = theta;
+    catch
+        % Optimization failed, keep old warping
+    end
     
     [gpstruct,exitflag] = gpTrainingSet(gpstruct,'all',u0,[],optimState,options,1);    
 end
