@@ -16,7 +16,7 @@ u0 = optimState.U(1,:);
 gpstruct.inpwarp.type = 1;
 gpstruct.inpwarp.params = zeros(1,nvars*2);
 gpstruct.inpwarp.prior.mu = zeros(1,nvars*2);
-gpstruct.inpwarp.prior.sigma = 0.5*ones(1,nvars*2);
+gpstruct.inpwarp.prior.sigma = 0.25*ones(1,nvars*2);
 gpstruct.inpwarp.bounds.lb = -3*ones(1,nvars*2);
 gpstruct.inpwarp.bounds.ub = 3*ones(1,nvars*2);
 
@@ -24,7 +24,7 @@ gpstruct.inpwarp.bounds.ub = 3*ones(1,nvars*2);
 gpstruct.LB = optimState.LB;
 gpstruct.UB = optimState.UB;
 
-optoptions.Display = 'off';
+optoptions.Display = 'iter';
 optoptions.MaxFunEvals = min(50*nvars,300);
 
 xbase = gpstruct.x;
