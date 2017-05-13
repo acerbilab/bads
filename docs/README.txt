@@ -3,7 +3,7 @@ Bayesian Adaptive Direct Search (BADS) documentation
 
 For a description of the usage of BADS, type
 
-> help bads
+  > help bads
 
 in the MATLAB shell.
 
