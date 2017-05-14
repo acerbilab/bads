@@ -261,6 +261,7 @@ defopts.gpSVGDiters             = '200                  % SVGD iterations for GP
 defopts.gpWarnings              = 'off          % Issue warning if GP hyperparameters fit fails';
 defopts.NormAlphaLevel          = '1e-6                 % Alpha level for normality test of gp predictions';
 defopts.InputWarping            = 'off                  % GP nonlinear input warping';
+defopts.InputWarpStart          = 'min(50*nvars,200)    % Start input warping after this # fcn evals';
 
 % GP warping parameters (unsupported)
 defopts.FitnessShaping          = 'off                  % Nonlinear rescaling of objective fcn';
@@ -1036,7 +1037,7 @@ while ~isFinished_flag
     %----------------------------------------------------------------------
     % Input warping (experimental feature)
     if (options.InputWarping) && ...
-            optimState.funccount >= min(nvars*50,200) && ~isfield(gpstruct,'inpwarp')
+            optimState.funccount >= options.InputWarpStart && ~isfield(gpstruct,'inpwarp')
         % Compute input warping
         gpstruct.inpwarp = warpinput(optimState,options);
         gpstruct.LB = optimState.LB;
