@@ -62,7 +62,7 @@ This project is under active development. If you find a bug, or anything that ne
 
 ## Reference
 
-1. Acerbi, L. & Ma, W. J. (2017). Practical Bayesian Optimization for Model Fitting with Bayesian Adaptive Direct Search. *arXiv preprint*, arXiv:YYMM.NNNN. (link)
+1. Acerbi, L. & Ma, W. J. (2017). Practical Bayesian Optimization for Model Fitting with Bayesian Adaptive Direct Search. *arXiv preprint*, arXiv:1705.04405. ([link](https://arxiv.org/abs/1705.04405))
 
 You can cite BADS in your work with something along the lines of
 
