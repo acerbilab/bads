@@ -70,6 +70,11 @@ lb = [-1 -1];   ub = [1 1]; % Hard bounds only
 % Non-bound constraints are violated outside the unit circle
 nonbcon = @(x) sum(x.^2,2) > 1;
 
+% Note that NONBCON requires a matrix input. Suppose we want to write the 
+% above case without using SUM. We would have:
+% nonbcon = @(x) (x(:,1).^2 + x(:,2).^2) > 1;   % Correct
+% nonbcon = @(x) (x(1).^2 + x(2).^2) > 1;       % Wrong! not matrix input
+
 % Screen display
 fprintf('\n');
 display('*** Example 2: Non-bound constraints');

@@ -35,8 +35,8 @@ function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PU
 %   X = BADS(FUN,X0,LB,UB,PLB,PUB,NONBCON) subjects the minimization to the 
 %   non-bound constraints defined in NONBCON. The function NONBCON accepts 
 %   a N-by-D matrix XI where N is any number of points to evaluate and D is
-%   the number of dimensions, and returns the vector C, representing the
-%   degree of violation of non-bound inequalities for each point in XI. 
+%   the number of dimensions, and returns a N-by-1 vector C, representing 
+%   the degree of violation of non-bound inequalities for each point in XI. 
 %   BADS minimizes FUN such that C(X)<=0.
 %
 %   X = BADS(FUN,X0,LB,UB,PLB,PUB,NONBCON,OPTIONS) minimizes with the default 
@@ -125,8 +125,8 @@ function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PU
 %   Author (copyright): Luigi Acerbi, 2017
 %   e-mail: luigi.acerbi@{gmail.com,nyu.edu}
 %   URL: http://luigiacerbi.com
-%   Release date: May 11, 2017
-%   Version: 1.0
+%   Release date: May 16, 2017
+%   Version: 1.0.1
 %   Code repository: https://github.com/lacerbi/bads
 %--------------------------------------------------------------------------
 
@@ -370,17 +370,20 @@ if any(fixidx)
     return;
 end
 
+% Convert from char to function handles
+if ischar(fun); fun = str2func(fun); end
+if ischar(nonbcon); nonbcon = str2func(nonbcon); end
+
 % Setup algorithm options
 options = setupoptions(nvars,defopts,options);    
 
 % Setup and transform variables
 [u0,LB,UB,PLB,PUB,MeshSizeInteger,optimState] = ...
-    setupvars(x0,LB,UB,PLB,PUB,optimState,options,prnt);
+    setupvars(x0,LB,UB,PLB,PUB,optimState,nonbcon,options,prnt);
     
 optimState = updateSearchBounds(optimState);
 
 % Store objective function
-if ischar(fun); fun = str2func(fun); end
 optimState.fun = fun;
 if isempty(varargin)
     funwrapper = fun;   % No additional function arguments passed
@@ -389,7 +392,6 @@ else
 end
 
 % Store constraints function
-if ischar(nonbcon); nonbcon = str2func(nonbcon); end
 optimState.nonbcon = nonbcon;
 
 % Initialize function logger
@@ -1550,4 +1552,5 @@ end
 %--------------------------------------------------------------------------
 % HISTORY
 %--------------------------------------------------------------------------
-% 1.0 (May/11/2017) First release.
+% 1.0   (May/11/2017) First release.
+% 1.0.1 (May/16/2017) Improved documentation and added check for NONBCON.

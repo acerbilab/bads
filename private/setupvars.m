@@ -1,4 +1,4 @@
-function [u0,LB,UB,PLB,PUB,MeshSizeInteger,optimState] = setupvars(x0,LB,UB,PLB,PUB,optimState,options,prnt)
+function [u0,LB,UB,PLB,PUB,MeshSizeInteger,optimState] = setupvars(x0,LB,UB,PLB,PUB,optimState,nonbcon,options,prnt)
 %INITVARS Initialize variables and transform coordinates.
 
 nvars = numel(x0);
@@ -6,6 +6,22 @@ nvars = numel(x0);
 % Test bound order
 if ~all(LB <= PLB & PLB < PUB & PUB <= UB)
     error('Bound vectors do not respect the order: LB <= PLB < PUB <= UB.');
+end
+
+% Check NONBCON
+if ~isempty(nonbcon)
+    conerr = false;
+    try
+        y = nonbcon([PLB; PUB]);
+        if size(y,1) ~= 2 || size(y,2) ~= 1
+            conerr = true;
+        end
+    catch
+        conerr = true;        
+    end
+    if conerr
+        error('NONBCON should be a function handle that takes a matrix X as input and returns a column vector of bound violations.');        
+    end
 end
 
 % Gentle warning for infinite bounds
