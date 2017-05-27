@@ -1,5 +1,5 @@
 function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PUB,nonbcon,options,varargin)
-%BADS Constrained optimization using Bayesian Adaptive Direct Search
+%BADS Constrained optimization using Bayesian Adaptive Direct Search (v1.0.2)
 %   BADS attempts to solve problems of the form:
 %       min F(X)  subject to:  LB <= X <= UB
 %        X                        C(X) <= 0        (optional)
@@ -125,8 +125,8 @@ function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PU
 %   Author (copyright): Luigi Acerbi, 2017
 %   e-mail: luigi.acerbi@{gmail.com,nyu.edu}
 %   URL: http://luigiacerbi.com
-%   Release date: May 16, 2017
-%   Version: 1.0.1
+%   Release date: May 27, 2017
+%   Version: 1.0.2
 %   Code repository: https://github.com/lacerbi/bads
 %--------------------------------------------------------------------------
 
@@ -147,6 +147,7 @@ defopts.PeriodicVars            = '[]           % Array with indices of periodic
 defopts.NonlinearScaling        = 'on           % Automatic nonlinear rescaling of variables';
 defopts.CompletePoll            = 'off          % Complete polling around the current iterate';
 defopts.AccelerateMesh          = 'on           % Accelerate mesh contraction';
+defopts.OutputFcn               = '[]           % Output function'; 
 defopts.UncertaintyHandling     = '[]           % Explicit noise handling (if empty, determine at runtime)';
 defopts.NoiseSize               = '[]           % Base observation noise magnitude';
 defopts.NoiseFinalSamples       = '10           % Samples to estimate FVAL at the end (for noisy objectives)';
@@ -364,7 +365,19 @@ if any(fixidx)
         nonbcon_fix = @(x) nonbcon(expandvars(x,fixidx,fixedvars));
     else
         nonbcon_fix = [];
-    end    
+    end
+    if isfield(options,'OutputFcn') && ~isempty(options.OutputFcn)
+        if ischar(options.OutputFcn)
+            outputfun = eval(options.OutputFcn);
+        else
+            outputfun = eval(options.OutputFun);
+        end
+        outputfun_fix = @(x,optimState,state) outputfun(expandvars(x,fixidx,fixedvars),optimState,state);
+    else
+        outputfun_fix = [];
+    end
+    options.OutputFcn = outputfun_fix;  % Assign Output function
+        
     % Run of BADS with lowered dimensionality
     [x,fval,exitflag,output,optimState,gpstruct] = fixedbads(fun_fix,x0,LB,UB,PLB,PUB,nonbcon_fix,options,fixidx,nargout);            
     return;
@@ -375,7 +388,10 @@ if ischar(fun); fun = str2func(fun); end
 if ischar(nonbcon); nonbcon = str2func(nonbcon); end
 
 % Setup algorithm options
-options = setupoptions(nvars,defopts,options);    
+options = setupoptions(nvars,defopts,options);
+
+% Output function
+outputfun = options.OutputFcn;
 
 % Setup and transform variables
 [u0,LB,UB,PLB,PUB,MeshSizeInteger,optimState] = ...
@@ -408,7 +424,11 @@ optimState.iter = iter;
 if ~isfinite(fval); error('Cannot find valid starting point.'); end
 exitflag = 0;
 msg = 'Optimization terminated: reached maximum number of function evaluations after initialization.';
-    
+
+if ~isempty(outputfun)
+    isFinished_flag = outputfun(origunits(u,optimState),optimState,'init');
+end
+
 % Change options for uncertainty handling
 if optimState.UncertaintyHandling
     options.TolStallIters = 2*options.TolStallIters;
@@ -1025,6 +1045,10 @@ while ~isFinished_flag
                 fprintf(displayFormat,iter,optimState.funccount,fval,MeshSize,string,action);
             end
         end
+        
+        if ~isempty(outputfun)
+            isFinished_flag = outputfun(origunits(u,optimState),optimState,'iter');
+        end
                 
         %H = fhess(@(xi_) gppred(xi_,gpstruct), gridunits(x,optimState), [], 'step', optimState.searchmeshsize)
         %H2 = fhess(@(x_) funwrapper(x_), x, [], 'step', optimState.searchmeshsize);        
@@ -1146,6 +1170,10 @@ if optimState.UncertaintyHandling && iter > 1
             optimState.iterList.fsd(index) = fsd;
         end
     end
+end
+
+if ~isempty(outputfun)
+    isFinished_flag = outputfun(origunits(u,optimState),optimState,'done');
 end
 
 % Convert back to original space
@@ -1554,3 +1582,4 @@ end
 %--------------------------------------------------------------------------
 % 1.0   (May/11/2017) First release.
 % 1.0.1 (May/16/2017) Improved documentation and added check for NONBCON.
+% 1.0.2 (May/27/2017) Added support for output functions.
