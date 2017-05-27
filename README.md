@@ -1,4 +1,4 @@
-# Bayesian Adaptive Direct Search (BADS)
+# Bayesian Adaptive Direct Search (BADS) - v1.0.2
 
 ## What is it
 
