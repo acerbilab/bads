@@ -1,5 +1,5 @@
 function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PUB,nonbcon,options,varargin)
-%BADS Constrained optimization using Bayesian Adaptive Direct Search (v1.0.2)
+%BADS Constrained optimization using Bayesian Adaptive Direct Search (v1.0.3)
 %   BADS attempts to solve problems of the form:
 %       min F(X)  subject to:  LB <= X <= UB
 %        X                        C(X) <= 0        (optional)
@@ -125,8 +125,8 @@ function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PU
 %   Author (copyright): Luigi Acerbi, 2017
 %   e-mail: luigi.acerbi@{gmail.com,nyu.edu}
 %   URL: http://luigiacerbi.com
-%   Release date: May 27, 2017
-%   Version: 1.0.2
+%   Release date: June 5, 2017
+%   Version: 1.0.3
 %   Code repository: https://github.com/lacerbi/bads
 %--------------------------------------------------------------------------
 
@@ -366,13 +366,16 @@ if any(fixidx)
     else
         nonbcon_fix = [];
     end
-    if isfield(options,'OutputFcn') && ~isempty(options.OutputFcn)
+    if isfield(options,'OutputFcn') && ~isempty(options.OutputFcn) && ...
+            (isa(options.OutputFcn,'function_handle') || ~isempty(eval(options.OutputFcn)))
         if ischar(options.OutputFcn)
-            outputfun = eval(options.OutputFcn);
+            outputfun_tmp = eval(options.OutputFcn);
+        elseif isa(options.OutputFcn,'function_handle')
+            outputfun_tmp = options.OutputFcn;
         else
-            outputfun = eval(options.OutputFun);
+            error('OPTIONS.OutputFcn should be a function handle to an output function.');
         end
-        outputfun_fix = @(x,optimState,state) outputfun(expandvars(x,fixidx,fixedvars),optimState,state);
+        outputfun_fix = @(x,optimState,state) outputfun_tmp(expandvars(x,fixidx,fixedvars),optimState,state);
     else
         outputfun_fix = [];
     end
@@ -1538,7 +1541,6 @@ else
 end
 
 end
-
 %--------------------------------------------------------------------------
 function xprime = expandvars(x,fixidx,fixvals)
 %EXPANDVARS Expand fixed variables.
@@ -1549,8 +1551,6 @@ xprime(:,~fixidx) = x;
 xprime(:,fixidx) = repmat(fixvals, [n 1]);
 
 end
-
-
 %--------------------------------------------------------------------------
 function add2path()
 %ADD2PATH Adds BADS subfolders to MATLAB path.
@@ -1583,3 +1583,4 @@ end
 % 1.0   (May/11/2017) First release.
 % 1.0.1 (May/16/2017) Improved documentation and added check for NONBCON.
 % 1.0.2 (May/27/2017) Added support for output functions.
+% 1.0.3 (Jun/05/2017) Fixed bug with fixed variables/output functions.

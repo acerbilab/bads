@@ -238,6 +238,9 @@ options.MaxFunEvals         = 50;       % Very low budget of function evaluation
 options.Display             = 'final';   % Print only basic output ('off' turns off)
 options.UncertaintyHandling = 0;        % We tell BADS that the objective is deterministic
 
+% Custom output function (return FALSE to continue, TRUE to stop optimization)
+options.OutputFcn           = @(x,optimState,state) ~isfinite(fprintf('%s %d... ', state, optimState.iter));
+
 % Screen display
 fprintf('\n');
 display('*** Example 6: Extended usage');

@@ -34,7 +34,6 @@ UB = UB(freeidx);
 PLB = PLB(freeidx);
 PUB = PUB(freeidx);
 
-
 switch nout
     case 1
         x_free = bads(fun_fix,x0,LB,UB,PLB,PUB,nonbcon_fix,options);    
