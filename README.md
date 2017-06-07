@@ -49,6 +49,8 @@ BADS follows a [mesh adaptive direct search](http://epubs.siam.org/doi/abs/10.11
 
 **Fig 1: BADS procedure** ![BADS procedure](https://github.com/lacerbi/bads/blob/master/docs/bads-cartoon.png "Fig 1: BADS procedure")
 
+See [here](https://github.com/lacerbi/optimviz) for a visualization of several optimizers at work, including BADS.
+
 See our paper for more details [[1](#reference)].
 
 ## Troubleshooting
