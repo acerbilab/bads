@@ -103,7 +103,7 @@ switch lower(state)
             end
             
             % Check returned function SD
-            if hescnoise && (~isfinite(fsd) || ~isscalar(fsd) || ~isreal(fsd) || fsd <= 0.0)
+            if hescnoise && (~isscalar(fsd) || ~isfinite(fsd) || ~isreal(fsd) || fsd <= 0.0)
                 error(['The returned estimated SD (second function output) must be a finite, non-negative real-valued scalar (returned SD: ' mat2str(fsd) ').']);
             end            
             
