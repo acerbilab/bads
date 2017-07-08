@@ -98,7 +98,7 @@ switch lower(state)
             t = toc;
             
             % Check returned function value
-            if ~isfinite(fval) || ~isscalar(fval) || ~isreal(fval)
+            if ~isscalar(fval) || ~isfinite(fval) || ~isreal(fval)
                 error(['The returned function value must be a finite real-valued scalar (returned value: ' mat2str(fval) ').']);
             end
             
