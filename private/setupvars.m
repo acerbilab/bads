@@ -145,8 +145,9 @@ if ~isempty(options.FunValues)
     Y = options.FunValues.Y;
     if size(X,1) ~= size(Y,1)
         error('X and Y arrays in the OPTIONS.FunValues need to have the same number of rows (each row is a tested point).');        
-    end    
-    if ~all(isfinite(X)) || ~all(isfinite(Y)) || ~isreal(X) || ~isreal(Y)
+    end
+    
+    if ~all(isfinite(X(:))) || ~all(isfinite(Y(:))) || ~isreal(X) || ~isreal(Y)
         error('X and Y arrays need to be finite and real-valued.');                
     end    
     if ~isempty(X) && size(X,2) ~= nvars
