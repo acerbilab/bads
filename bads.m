@@ -1,5 +1,5 @@
 function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PUB,nonbcon,options,varargin)
-%BADS Constrained optimization using Bayesian Adaptive Direct Search (v1.0.3)
+%BADS Constrained optimization using Bayesian Adaptive Direct Search (v1.0.4)
 %   BADS attempts to solve problems of the form:
 %       min F(X)  subject to:  LB <= X <= UB
 %        X                        C(X) <= 0        (optional)
@@ -125,8 +125,8 @@ function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PU
 %   Author (copyright): Luigi Acerbi, 2017
 %   e-mail: luigi.acerbi@{gmail.com,nyu.edu}
 %   URL: http://luigiacerbi.com
-%   Release date: June 5, 2017
-%   Version: 1.0.3
+%   Release date: July 19, 2017
+%   Version: 1.0.4
 %   Code repository: https://github.com/lacerbi/bads
 %--------------------------------------------------------------------------
 
@@ -1584,3 +1584,4 @@ end
 % 1.0.1 (May/16/2017) Improved documentation and added check for NONBCON.
 % 1.0.2 (May/27/2017) Added support for output functions.
 % 1.0.3 (Jun/05/2017) Fixed bug with fixed variables/output functions.
+% 1.0.4 (Jul/19/2017) Fixed LB/UB starting point issue and minor fixes. 

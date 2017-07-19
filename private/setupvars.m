@@ -86,6 +86,10 @@ else
     u0 = force2grid(gridunits(x0,optimState),optimState);
 end
 
+% Adjust points that fall outside bounds due to gridization
+u0(u0 < optimState.LB) = u0(u0 < optimState.LB) + optimState.searchmeshsize;
+u0(u0 > optimState.UB) = u0(u0 > optimState.UB) - optimState.searchmeshsize;
+
 % Test that starting point X0 (U0 in transformed space) is within bounds
 LB_orig = optimState.trinfo.oldbounds.lb;
 UB_orig = optimState.trinfo.oldbounds.ub;
