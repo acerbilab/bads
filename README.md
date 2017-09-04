@@ -1,5 +1,7 @@
 # Bayesian Adaptive Direct Search (BADS) - v1.0.4
 
+**News:** The BADS paper [[1](#reference)] has been accepted for a poster presentation at [NIPS 2017](https://nips.cc/)!
+
 ## What is it
 
 BADS is a novel, fast Bayesian optimization algorithm designed to solve difficult optimization problems, in particular related to fitting computational models (e.g., via [maximum likelihood estimation](https://en.wikipedia.org/wiki/Maximum_likelihood_estimation)).
@@ -10,7 +12,6 @@ In our benchmark with real model-fitting problems, BADS performed on par or bett
 BADS is recommended when no gradient information is available, and the objective function is non-analytical or *noisy*, for example evaluated through numerical approximation or via simulation. 
 
 BADS requires no specific tuning and runs off-the-shelf like other built-in MATLAB optimizers such as `fminsearch`.
-
 
 ## Installation
 
@@ -65,6 +66,8 @@ This project is under active development. If you find a bug, or anything that ne
 ## Reference
 
 1. Acerbi, L. & Ma, W. J. (2017). Practical Bayesian Optimization for Model Fitting with Bayesian Adaptive Direct Search. *arXiv preprint*, arXiv:1705.04405. ([link](https://arxiv.org/abs/1705.04405))
+
+**Note:** This is a temporary reference. The paper will eventually appear in the proceedings of the NIPS 2017 conference.
 
 You can cite BADS in your work with something along the lines of
 
