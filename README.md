@@ -6,10 +6,10 @@
 
 BADS is a novel, fast Bayesian optimization algorithm designed to solve difficult optimization problems, in particular related to fitting computational models (e.g., via [maximum likelihood estimation](https://en.wikipedia.org/wiki/Maximum_likelihood_estimation)).
 
-BADS has been intensively tested for fitting behavioral, cognitive, and neural models and is currently being used in more than a dozen projects in the [Ma lab](http://www.cns.nyu.edu/malab/).
+BADS has been intensively tested for fitting behavioral, cognitive, and neural models, and is currently being used in more than a dozen projects in the [Ma lab](http://www.cns.nyu.edu/malab/) and in several other labs around the world.
 In our benchmark with real model-fitting problems, BADS performed on par or better than many other common and state-of-the-art MATLAB optimizers, such as `fminsearch`, `fmincon`, and `cmaes` [[1](#reference)].
 
-BADS is recommended when no gradient information is available, and the objective function is non-analytical or *noisy*, for example evaluated through numerical approximation or via simulation. 
+BADS is recommended when no gradient information is available, and the objective function is non-analytical or *noisy*, for example evaluated through numerical approximation or via simulation.
 
 BADS requires no specific tuning and runs off-the-shelf like other built-in MATLAB optimizers such as `fminsearch`.
 
@@ -62,6 +62,13 @@ If you have trouble doing something with BADS:
 - Contact me at <luigi.acerbi@nyu.edu>, putting 'BADS' in the subject of the email.
 
 This project is under active development. If you find a bug, or anything that needs correction, please let me know.
+
+## BADS for other programming languages
+
+BADS is currently available only for MATLAB. A Python version is being planned.
+
+If you are interested in porting BADS to Python or another language (R, [Julia](https://julialang.org/)), please get in touch at <luigi.acerbi@nyu.edu> (putting  'BADS' in the subject of the email); I'd be willing to help.
+However, before contacting me for this reason, please have a good look at the codebase here on GitHub, and at the paper [[1](#reference)]. BADS is a fairly complex piece of software, so be aware that porting it will require considerable effort and programming skills.
 
 ## Reference
 
