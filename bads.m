@@ -235,7 +235,7 @@ defopts.SearchMeshIncrement     = '1                    % Mesh size increment af
 defopts.SearchOptimize          = 'no                   % Further optimize acquisition function';
 
 % Gaussian process properties
-defopts.Ndata                   = '50 + 10*nvars       % Number of training data (doubled under uncertainty)';
+defopts.Ndata                   = '50 + 10*nvars       % Number of training data (minimum 200 under uncertainty)';
 defopts.MinNdata                = '50                   % Minimum number of training data (doubled under uncertainty)';
 defopts.BufferNdata             = '100                  % Max number of training data removed if too far from current point';
 defopts.gpSamples               = '0                    % Hyperparameters samples (0 = optimize)';
