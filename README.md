@@ -1,6 +1,8 @@
 # Bayesian Adaptive Direct Search (BADS) - v1.0.4
 
-**News:** The BADS paper [[1](#reference)] has been accepted for a poster presentation at [NIPS 2017](https://nips.cc/)! (20.9% acceptance rate this year, for a total of 3240 submissions)
+**News:** 
+- The BADS paper [[1](#reference)] has been accepted for a poster presentation at [NIPS 2017](https://papers.nips.cc/paper/6780-practical-bayesian-optimization-for-model-fitting-with-bayesian-adaptive-direct-search)! (20.9% acceptance rate this year, for a total of 3240 submissions)
+- BADS will be also presented at the NIPS workshop on Bayesian optimization for science and engineering, [BayesOpt 2017](https://bayesopt.github.io/).
 
 ## What is it
 
@@ -72,9 +74,7 @@ However, before contacting me for this reason, please have a good look at the co
 
 ## Reference
 
-1. Acerbi, L. & Ma, W. J. (2017). Practical Bayesian Optimization for Model Fitting with Bayesian Adaptive Direct Search. *arXiv preprint*, arXiv:1705.04405. ([link](https://arxiv.org/abs/1705.04405))
-
-**Note:** This is a temporary reference. The paper will eventually appear in the proceedings of the NIPS 2017 conference.
+1. Acerbi, L. & Ma, W. J. (2017). Practical Bayesian Optimization for Model Fitting with Bayesian Adaptive Direct Search. In *Advances in Neural Information Processing Systems 30*, pages 1834-1844. ([link](https://papers.nips.cc/paper/6780-practical-bayesian-optimization-for-model-fitting-with-bayesian-adaptive-direct-search), [arXiv preprint](https://arxiv.org/abs/1705.04405))
 
 You can cite BADS in your work with something along the lines of
 
