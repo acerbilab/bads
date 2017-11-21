@@ -111,9 +111,10 @@ function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PU
 %   https://github.com/lacerbi/bads
 %   Also, check out the FAQ: https://github.com/lacerbi/bads/wiki
 %
-%   Reference: Luigi Acerbi and Wei Ji Ma (2017). "Practical Bayesian
-%   Optimization for Model Fitting with Bayesian Adaptive Direct Search",
-%   arXiv preprint, arXiv:1705.04405 (https://arxiv.org/abs/1705.04405).
+%   Reference: Acerbi, L. & Ma, W. J. (2017). "Practical Bayesian 
+%   Optimization for Model Fitting with Bayesian Adaptive Direct Search". 
+%   In Advances in Neural Information Processing Systems 30, pages 1834-1844.
+%   (arXiv preprint: https://arxiv.org/abs/1705.04405).
 %
 %   See also BADS_EXAMPLES, @.
 
