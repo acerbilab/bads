@@ -1,4 +1,4 @@
-# Bayesian Adaptive Direct Search (BADS) - v1.0.4
+# Bayesian Adaptive Direct Search (BADS) - v1.0.5
 
 **News:** 
 - The BADS paper [[1](#reference)] has been accepted for a poster presentation at [NIPS 2017](https://papers.nips.cc/paper/6780-practical-bayesian-optimization-for-model-fitting-with-bayesian-adaptive-direct-search)! (20.9% acceptance rate this year, for a total of 3240 submissions)
