@@ -52,7 +52,7 @@ end
 % Make cell arrays
 cellfields = {'PollMethod','PollAcqFcn','SearchMethod','SearchAcqFcn'};
 for f = cellfields
-    if ischar(options.(f{:})) || isa(options.(f{:}), 'function_handle');
+    if ischar(options.(f{:})) || isa(options.(f{:}), 'function_handle')
         options.(f{:}) = {options.(f{:})};
     end
 end
@@ -64,8 +64,8 @@ if isempty(options.OptimToolbox)
         options.OptimToolbox = 1;
     else
         options.OptimToolbox = 0;
-        warning('Could not find the Optimization Toolbox™. Using alternative optimization functions. This will slightly degrade performance. If you do not wish this message to appear, set OPTIONS.OptimToolbox = 0.');
-    end    
+        warning('bads:noOptimToolbox', 'Could not find the Optimization Toolbox™. Using alternative optimization functions. This will slightly degrade performance. If you do not wish this message to appear, set OPTIONS.OptimToolbox = 0.');
+    end
 end
 
 % Check options
@@ -74,7 +74,7 @@ if round(options.MaxFunEvals) ~= options.MaxFunEvals || options.MaxFunEvals <= 0
 end
 
 if options.ImprovementQuantile > 0.5
-    warning('OPTIONS.ImprovementQuantile is greater than 0.5. This might produce unpredictable behavior. Set OPTIONS.ImprovementQuantile < 0.5 for conservative improvement.');
+    warning('bads:excessImprovementQuantile', 'OPTIONS.ImprovementQuantile is greater than 0.5. This might produce unpredictable behavior. Set OPTIONS.ImprovementQuantile < 0.5 for conservative improvement.');
 end
 
 if ~isempty(options.NoiseSize) && options.NoiseSize(1) <= 0

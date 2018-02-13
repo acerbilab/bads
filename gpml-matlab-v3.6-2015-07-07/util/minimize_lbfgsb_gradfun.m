@@ -9,7 +9,7 @@ function G = minimize_lbfgsb_gradfun(X,varargin)
   global minimize_lbfgsb_gradient
   global minimize_lbfgsb_X
 
-  if norm(unwrap(X)-unwrap(minimize_lbfgsb_X))>1e-10
+  if norm(unwrap2vec(X)-unwrap2vec(minimize_lbfgsb_X))>1e-10
     [y,G] = feval(f,rewrap(strctX,X),varargin{3:end});
   else
     y = minimize_lbfgsb_objective(minimize_lbfgsb_iteration_number);
@@ -19,27 +19,27 @@ function G = minimize_lbfgsb_gradfun(X,varargin)
   % memorise gradient and position
   minimize_lbfgsb_gradient = G;
   minimize_lbfgsb_X = X;
-  G = unwrap(G);
+  G = unwrap2vec(G);
 
 
 % Extract the numerical values from "s" into the column vector "v". The
 % variable "s" can be of any type, including struct and cell array.
 % Non-numerical elements are ignored. See also the reverse rewrap.m. 
-function v = unwrap(s)
+function v = unwrap2vec(s)
   v = [];   
   if isnumeric(s)
     v = s(:);                       % numeric values are recast to column vector
   elseif isstruct(s)
-    v = unwrap(struct2cell(orderfields(s)));% alphabetize, conv to cell, recurse
+    v = unwrap2vec(struct2cell(orderfields(s)));% alphabetize, conv to cell, recurse
   elseif iscell(s)
     for i = 1:numel(s)            % cell array elements are handled sequentially
-      v = [v; unwrap(s{i})];
+      v = [v; unwrap2vec(s{i})];
     end
   end                                                  % other types are ignored
 
 % Map the numerical elements in the vector "v" onto the variables "s" which can
 % be of any type. The number of numerical elements must match; on exit "v"
-% should be empty. Non-numerical entries are just copied. See also unwrap.m.
+% should be empty. Non-numerical entries are just copied. See also unwrap2vec.m.
 function [s v] = rewrap(s, v)
   if isnumeric(s)
     if numel(v) < numel(s)

@@ -24,7 +24,7 @@ function [post nlZ dnlZ] = infPrior(inf, prior, hyp, varargin)
 %     put a joint Student's t prior with mean vector mu, covariance matrix s2
 %     and nu degrees of freedom on the weights of the mean function e.g.
 %     hyp.mean ~ T(mu,s2,nu) for meanLinear
-%     Here, we do not have a struct as in 4) but the index in unwrap(hyp).
+%     Here, we do not have a struct as in 4) but the index in unwrap2vec(hyp).
 %  6) >> p = {@priorWeibull,lam,k}; g = @exp; dg = @exp; ig = @log;
 %     >> prior.cov{2} = {@priorTransform,g,dg,ig,p}
 %     put a univariate Weibull distribution on the exponentiated second
@@ -46,7 +46,7 @@ function [post nlZ dnlZ] = infPrior(inf, prior, hyp, varargin)
 [post nlZ dnlZ] = inf(hyp, varargin{:});                     % perform inference
 if ~isempty(prior)                % add hyperprior contributions to nlZ and dnlZ
   nam = fieldnames(prior);
-  num = zeros(numel(unwrap(hyp)),1);       % number of priors per hyperparameter
+  num = zeros(numel(unwrap2vec(hyp)),1);       % number of priors per hyperparameter
   for i=1:numel(nam)     % iterate over kinds of hyperparameters cov/lik/mean/xu
     ni = nam{i};                                         % name of the ith field
     if strcmp(ni,'multi')                      % first catch multivariate priors
@@ -62,13 +62,13 @@ if ~isempty(prior)                % add hyperprior contributions to nlZ and dnlZ
           if isstruct(idx)                           % massage idx into a vector
             idxs = rewrap(hyp,zeros(size(num)));              % structured index
             for nj = fieldnames(idx), idxs.(nj{1})( idx.(nj{1}) ) = 1; end
-            idx = unwrap(idxs)>0;                   % linearise structured index
+            idx = unwrap2vec(idxs)>0;                   % linearise structured index
           else
             idxz = zeros(size(num)); idxz(idx) = 1; idx = idxz>0; % binary index
           end
           if sum(idx)<=1, error('multivariate priors need >1 hyperparam'), end
           num(idx) = num(idx)+1;                             % inc prior counter
-          hypu = unwrap(hyp); dnlZ = unwrap(dnlZ);
+          hypu = unwrap2vec(hyp); dnlZ = unwrap2vec(dnlZ);
           if strncmp(pjstr,'priorClamped',12) || ...  % clamp derivative to zero
              strncmp(pjstr,'priorDelta',10), dnlZ(idx) = 0;
           else
@@ -89,7 +89,7 @@ if ~isempty(prior)                % add hyperprior contributions to nlZ and dnlZ
       pj = p{j}; if ~iscell(pj) && ~isempty(pj), pj = {pj}; end   % enforce cell
       if ~isempty(pj)            % only proceed if a nonempty prior is specified
         num = rewrap(hyp,num); num.(ni)(j) = num.(ni)(j)+1;  % inc prior counter
-        num = unwrap(num);
+        num = unwrap2vec(num);
         pj1str = pj{1}; if ~ischar(pj1str), pj1str = func2str(pj1str); end
         if strncmp(pj1str,'priorClamped',12) || strncmp(pj1str,'priorDelta',10)
           dnlZ.(ni)(j) = 0;                           % clamp derivative to zero

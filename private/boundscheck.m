@@ -10,7 +10,7 @@ if isscalar(PLB); PLB = PLB*ones(1,nvars); end
 if isscalar(PUB); PUB = PUB*ones(1,nvars); end
 
 if isempty(PLB) || isempty(PUB)
-    warning('Plausible lower/upper bounds PLB and/or PUB not specified. Using hard upper/lower bounds instead.');
+    warning('bads:pbUnspecified', 'Plausible lower/upper bounds PLB and/or PUB not specified. Using hard upper/lower bounds instead.');
     if isempty(PLB); PLB = LB; end
     if isempty(PUB); PUB = UB; end
 end

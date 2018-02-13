@@ -39,18 +39,18 @@ global minimize_lbfgsb_X
 % init global variables
 minimize_lbfgsb_iteration_number = 0;
 minimize_lbfgsb_objective = Inf;
-minimize_lbfgsb_gradient = 0*unwrap(X);
+minimize_lbfgsb_gradient = 0*unwrap2vec(X);
 minimize_lbfgsb_X = X;
 
 X0 = X;
-lb = -Inf*ones(size(unwrap(X0)));
-ub =  Inf*ones(size(unwrap(X0)));
+lb = -Inf*ones(size(unwrap2vec(X0)));
+ub =  Inf*ones(size(unwrap2vec(X0)));
 maxiter = abs(length); % max number of iterations
 
 % no callback routine used so far
 % m is the number of saved vectors used to estimate the Hessian
 % factr is the precision 1e-12
-X = lbfgsb( unwrap(X0), lb, ub, 'minimize_lbfgsb_objfun', ...
+X = lbfgsb( unwrap2vec(X0), lb, ub, 'minimize_lbfgsb_objfun', ...
                                 'minimize_lbfgsb_gradfun', ...
          {f,X0,varargin{:}}, [], ...
          'maxiter',maxiter, 'm',4, 'factr',1e-12, 'pgtol',1e-5);
@@ -68,21 +68,21 @@ clear minimize_lbfgsb_X
 % Extract the numerical values from "s" into the column vector "v". The
 % variable "s" can be of any type, including struct and cell array.
 % Non-numerical elements are ignored. See also the reverse rewrap.m. 
-function v = unwrap(s)
+function v = unwrap2vec(s)
   v = [];   
   if isnumeric(s)
     v = s(:);                       % numeric values are recast to column vector
   elseif isstruct(s)
-    v = unwrap(struct2cell(orderfields(s)));% alphabetize, conv to cell, recurse
+    v = unwrap2vec(struct2cell(orderfields(s)));% alphabetize, conv to cell, recurse
   elseif iscell(s)
     for i = 1:numel(s)            % cell array elements are handled sequentially
-      v = [v; unwrap(s{i})];
+      v = [v; unwrap2vec(s{i})];
     end
   end                                                  % other types are ignored
 
 % Map the numerical elements in the vector "v" onto the variables "s" which can
 % be of any type. The number of numerical elements must match; on exit "v"
-% should be empty. Non-numerical entries are just copied. See also unwrap.m.
+% should be empty. Non-numerical entries are just copied. See also unwrap2vec.m.
 function [s v] = rewrap(s, v)
   if isnumeric(s)
     if numel(v) < numel(s)

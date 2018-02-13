@@ -1,6 +1,6 @@
 % Map the numerical elements in the vector "v" onto the variables "s" which can
 % be of any type. The number of numerical elements must match; on exit "v"
-% should be empty. Non-numerical entries are just copied. See also unwrap.m.
+% should be empty. Non-numerical entries are just copied. See also unwrap2vec.m.
 
 function [s v] = rewrap(s, v)
 

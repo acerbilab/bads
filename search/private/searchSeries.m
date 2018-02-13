@@ -49,7 +49,7 @@ for i = 1:D
         gptemp.prior.mean{2}{2} = gptemp.hyp(1).mean(2);        
     end
     
-    bounds = unwrap(gptemp.bounds);
+    bounds = unwrap2vec(gptemp.bounds);
     lb = bounds(1:2:end-1);
     ub = bounds(2:2:end);                
     
@@ -57,7 +57,7 @@ for i = 1:D
     gptemp.inf = {@inference_with_prior, @exact_inference, prior};    
 
     % hyp0(1) = gptemp.hyp;
-    %s = min(max(unwrap(independent_prior(gptemp.prior)),lb),ub);   
+    %s = min(max(unwrap2vec(independent_prior(gptemp.prior)),lb),ub);   
     %hyp0(2) = rewrap(gptemp.hyp,s);
     
     % Quick-and-dirty grid optimization

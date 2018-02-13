@@ -32,7 +32,7 @@ for i = 1:Nhyp
     catch
         y0 = NaN(1,4);
         if nargout > 4; dy = NaN(4,D); end
-        warning('Error in computing the GP derivative.');
+        warning('bads:gpGradFail', 'Error in computing the GP derivative.');
     end
     
     ymu(i) = y0(1); 

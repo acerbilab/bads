@@ -76,7 +76,7 @@ if length>0, S='Linesearch'; else S='Function evaluation'; end
 i = 0;                                            % zero the run length counter
 ls_failed = 0;                             % no previous line search has failed
 [f0 df0] = feval(f, X, varargin{:});          % get function value and gradient
-Z = X; X = unwrap(X); df0 = unwrap(df0);
+Z = X; X = unwrap2vec(X); df0 = unwrap2vec(df0);
 if verbose > 0; fprintf('%s %6i;  Value %4.6e\r', S, i, f0); end
 if exist('fflush','builtin') fflush(stdout); end
 fX = f0;
@@ -98,7 +98,7 @@ while i < abs(length)                                      % while not finished
         M = M - 1; i = i + (length<0);                         % count epochs?!
         
         [f3 df3] = feval(f, rewrap(Z,X+x3*s), varargin{:});
-        df3 = unwrap(df3);
+        df3 = unwrap2vec(df3);
         if isnan(f3) || isinf(f3) || any(isnan(df3)+isinf(df3)), error(' '),end
         success = 1;
       catch                                % catch any error which occured in f
@@ -142,7 +142,7 @@ while i < abs(length)                                      % while not finished
     end
     x3 = max(min(x3, x4-INT*(x4-x2)),x2+INT*(x4-x2));  % don't accept too close
     [f3 df3] = feval(f, rewrap(Z,X+x3*s), varargin{:});
-    df3 = unwrap(df3);
+    df3 = unwrap2vec(df3);
     if f3 < F0, X0 = X+x3*s; F0 = f3; dF0 = df3; end         % keep best values
     M = M - 1; i = i + (length<0);                             % count epochs?!
     d3 = df3'*s;                                                    % new slope
@@ -173,7 +173,7 @@ end
 X = rewrap(Z,X); 
 if verbose > 0; fprintf('\n'); if exist('fflush','builtin') fflush(stdout); end; end
 
-function v = unwrap(s)
+function v = unwrap2vec(s)
 % Extract the numerical values from "s" into the column vector "v". The
 % variable "s" can be of any type, including struct and cell array.
 % Non-numerical elements are ignored. See also the reverse rewrap.m. 
@@ -181,17 +181,17 @@ v = [];
 if isnumeric(s)
   v = s(:);                        % numeric values are recast to column vector
 elseif isstruct(s)
-  v = unwrap(struct2cell(orderfields(s))); % alphabetize, conv to cell, recurse
+  v = unwrap2vec(struct2cell(orderfields(s))); % alphabetize, conv to cell, recurse
 elseif iscell(s)
   for i = 1:numel(s)             % cell array elements are handled sequentially
-    v = [v; unwrap(s{i})];
+    v = [v; unwrap2vec(s{i})];
   end
 end                                                   % other types are ignored
 
 function [s v] = rewrap(s, v)
 % Map the numerical elements in the vector "v" onto the variables "s" which can
 % be of any type. The number of numerical elements must match; on exit "v"
-% should be empty. Non-numerical entries are just copied. See also unwrap.m.
+% should be empty. Non-numerical entries are just copied. See also unwrap2vec.m.
 if isnumeric(s)
   if numel(v) < numel(s)
     error('The vector for conversion contains too few elements')

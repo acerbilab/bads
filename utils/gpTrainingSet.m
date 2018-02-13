@@ -468,7 +468,7 @@ function [gpstruct,exitflag] = gpfit(gpstruct,Nsamples,options)
 %GPFIT Fit Gaussian Process hyper-parameters (optimize or sample).
 
 if isfield(gpstruct,'bounds') && ~isempty(gpstruct.bounds)
-    bounds = unwrap(gpstruct.bounds);
+    bounds = unwrap2vec(gpstruct.bounds);
     lb = bounds(1:2:end-1);
     ub = bounds(2:2:end);
 else
@@ -496,7 +496,7 @@ secondfit = options.DoubleRefit || highNoise || lowMean;
 
 if secondfit
     hrnd = gppriorrnd(gpstruct.prior,gpstruct.hyp(1));
-    hrnd = 0.5*(unwrap(hrnd) + unwrap(gpstruct.hyp(1)));
+    hrnd = 0.5*(unwrap2vec(hrnd) + unwrap2vec(gpstruct.hyp(1)));
     if highNoise; hrnd(end-1) = randn()-2; end   % Retry with low noise magnitude
     if lowMean; hrnd(end) = median(gpstruct.y); end % Retry with mean from median
     hyp0(2) = rewrap(gpstruct.hyp(1),min(max(hrnd,lb),ub));

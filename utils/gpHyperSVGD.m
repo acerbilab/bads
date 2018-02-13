@@ -33,7 +33,7 @@ end
 fixed = logical(fixed);
 
 % Get bounds
-bounds = unwrap(gpstruct.bounds);
+bounds = unwrap2vec(gpstruct.bounds);
 LB = bounds(1:2:end-1); UB = bounds(2:2:end);
 lb = LB(~fixed); ub = UB(~fixed);
 
@@ -52,7 +52,7 @@ if ~fixed(end); rescale(end) = std(gpstruct.y); end
 % Unwrap starting point, force it to be inside bounds
 theta0 = [];
 for i = 1:Nsamples
-    theta0i = unwrap(hyp0(1+mod(i-1,numel(hyp0))));
+    theta0i = unwrap2vec(hyp0(1+mod(i-1,numel(hyp0))));
     theta0i = theta0i + 0.1.*randn(size(theta0i));
     theta0i = min(max(theta0i(~fixed),lb),ub);
     theta0 = [theta0;theta0i'];
@@ -65,13 +65,13 @@ try
     
     kk = numel(theta)/Nsamples;
     for i = 1:Nsamples
-        newtheta = unwrap(gpstruct.hyp(1));
+        newtheta = unwrap2vec(gpstruct.hyp(1));
         newtheta(~fixed) = min(max(theta(i,:)',lb),ub);
         hyp(i) = rewrap(gpstruct.hyp(1),newtheta);
     end
         
 catch
-    warning(['Failed SVGD of hyper-parameters (' num2str(1) ' attempts). GP approximation might be unreliable.']);
+    warning('bads:gpHyperSVGDFail', ['Failed SVGD of hyper-parameters (' num2str(1) ' attempts). GP approximation might be unreliable.']);
     % Return input samples
     for i = 1:Nsamples
         hyp(i) = hyp0(1+mod(i-1,numel(hyp0)));
@@ -82,7 +82,7 @@ end
     function dlZ = gp_grad(theta, fixed, gpstruct, Nsamples)
     %GP_OPTIMIZER Wrapper function for GP optimization
 
-        newtheta = unwrap(gpstruct.hyp(1));
+        newtheta = unwrap2vec(gpstruct.hyp(1));
         f = @(thetastr) (feval(gpstruct.inf{:}, thetastr, gpstruct.mean, gpstruct.cov, gpstruct.lik, gpstruct.x, gpstruct.y));
         kk = numel(theta)/Nsamples;
         dlZ = [];
@@ -92,7 +92,7 @@ end
             newtheta(~fixed) = theta(ii,:);
             thetastruct = rewrap(gpstruct.hyp(1), newtheta);
             [~, ~, dnlZi] = f(thetastruct);
-            dnlZi = unwrap(dnlZi);
+            dnlZi = unwrap2vec(dnlZi);
             dnlZi(fixed) = [];
             dlZ = [dlZ; -dnlZi'];            
         end

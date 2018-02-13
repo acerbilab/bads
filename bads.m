@@ -126,8 +126,8 @@ function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PU
 %   Author (copyright): Luigi Acerbi, 2017
 %   e-mail: luigi.acerbi@{gmail.com,nyu.edu}
 %   URL: http://luigiacerbi.com
-%   Release date: July 19, 2017
-%   Version: 1.0.4
+%   Version: 1.0.5
+%   Release date: Feb 13, 2018
 %   Code repository: https://github.com/lacerbi/bads
 %--------------------------------------------------------------------------
 
@@ -1488,7 +1488,7 @@ nvars = numel(optimState.x0);
 if MeshSizeInteger == options.MaxPollGridNumber
     optimState.meshoverflows = optimState.meshoverflows + 1;
     if optimState.meshoverflows == ceil(options.MeshOverflowsWarning)
-        warning('The mesh attempted to expand above maximum size too many times. Try widening PLB and PUB.');
+        warning('bads:meshOverflow', 'The mesh attempted to expand above maximum size too many times. Try widening PLB and PUB.');
     end
 end
 end
@@ -1585,4 +1585,5 @@ end
 % 1.0.1 (May/16/2017) Improved documentation and added check for NONBCON.
 % 1.0.2 (May/27/2017) Added support for output functions.
 % 1.0.3 (Jun/05/2017) Fixed bug with fixed variables/output functions.
-% 1.0.4 (Jul/19/2017) Fixed LB/UB starting point issue and minor fixes. 
+% 1.0.4 (Jul/19/2017) Fixed LB/UB starting point issue and minor fixes.
+% 1.0.5 (Feb/13/2018) Updated reference, renamed unwrap.m, added warning identifiers.

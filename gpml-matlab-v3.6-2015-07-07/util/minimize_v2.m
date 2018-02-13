@@ -40,7 +40,7 @@
 function [X, fX, i] = minimize(X, F, p, varargin)
 if isnumeric(p), p = struct('length', p); end             % convert p to struct
 if p.length > 0, p.S = 'linesearch #'; else p.S = 'function evaluation #'; end;
-x = unwrap(X);                                % convert initial guess to vector
+x = unwrap2vec(X);                                % convert initial guess to vector
 if ~isfield(p,'method'), if length(x) > 1000, p.method = @LBFGS;
                          else p.method = @BFGS; end; end   % set default method
 if ~isfield(p,'verbosity'), p.verbosity = 2; end   % default 1 line text output
@@ -197,17 +197,17 @@ persistent F p;
 if nargout == 0
   p = varargin; if ischar(p{1}), F = str2func(p{1}); else F = p{1}; end
 else
-  [fx, dfx] = F(rewrap(p{2}, varargin{1}), p{3:end}); dfx = unwrap(dfx);
+  [fx, dfx] = F(rewrap(p{2}, varargin{1}), p{3:end}); dfx = unwrap2vec(dfx);
 end
 
-function v = unwrap(s)   % extract num elements of s (any type) into v (vector) 
+function v = unwrap2vec(s)   % extract num elements of s (any type) into v (vector) 
 v = [];   
 if isnumeric(s)
   v = s(:);                        % numeric values are recast to column vector
 elseif isstruct(s)
-  v = unwrap(struct2cell(orderfields(s))); % alphabetize, conv to cell, recurse
+  v = unwrap2vec(struct2cell(orderfields(s))); % alphabetize, conv to cell, recurse
 elseif iscell(s)                                      % cell array elements are
-  for i = 1:numel(s), v = [v; unwrap(s{i})]; end         % handled sequentially
+  for i = 1:numel(s), v = [v; unwrap2vec(s{i})]; end         % handled sequentially
 end                                                   % other types are ignored
 
 function [s v] = rewrap(s, v)    % map elements of v (vector) onto s (any type)

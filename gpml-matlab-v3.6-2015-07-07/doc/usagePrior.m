@@ -74,4 +74,4 @@ prior.multi{2} = {@priorGaussMulti,mu,s2,[1,3]};
 im = {@infPrior,@infExact,prior};                % inference method
 hyp_pN = feval(mfun, hyp, @gp, -10, im, par{:});         % optimise
 
-[unwrap(hyp), unwrap(hyp_plain), unwrap(hyp_p1), unwrap(hyp_pN)]
+[unwrap2vec(hyp), unwrap2vec(hyp_plain), unwrap2vec(hyp_p1), unwrap2vec(hyp_pN)]

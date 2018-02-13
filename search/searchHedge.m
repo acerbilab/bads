@@ -49,7 +49,7 @@ hedge.chosen = find(rand() < cumsum(hedge.p),1);
 if isempty(hedge.chosen)
     hedge.chosen = randi(nh);
     if options.gpWarnings
-        warning(['Cannot determine best search function in SEARCHHEDGE (P=' numarray2str(hedge.p) '). Attempting to continue.']);
+        warning('bads:searchHedgeFail', ['Cannot determine best search function in SEARCHHEDGE (P=' numarray2str(hedge.p) '). Attempting to continue.']);
     end
 end
 if hedge.gamma == 0

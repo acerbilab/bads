@@ -108,7 +108,7 @@ switch lower(state)
             end            
             
         catch fun_error
-            warning(['Error in executing the logged function ''' func2str(fun) ''' with input: ' mat2str(x)]);
+            warning('bads:funError', ['Error in executing the logged function ''' func2str(fun) ''' with input: ' mat2str(x)]);
             rethrow(fun_error);
         end
         

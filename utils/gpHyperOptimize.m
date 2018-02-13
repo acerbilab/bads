@@ -32,7 +32,7 @@ end
 fixed = logical(fixed);
 
 % Get bounds
-bounds = unwrap(gpstruct.bounds);
+bounds = unwrap2vec(gpstruct.bounds);
 LB = bounds(1:2:end-1); UB = bounds(2:2:end);
 lb = LB(~fixed); ub = UB(~fixed);
 
@@ -48,7 +48,7 @@ for iRun = 1:Nruns
     if iscell(hyp0); hyp = hyp0{iRun}; else hyp = hyp0(iRun); end
     
     % Unwrap starting point, force it to be inside bounds
-    theta0 = unwrap(hyp);
+    theta0 = unwrap2vec(hyp);
     theta0 = min(max(theta0(~fixed),lb),ub);
         
     % Evaluate starting point
@@ -145,14 +145,14 @@ for iRun = 1:Nruns
             end
             
             % Retry with random sample from prior        
-            theta0 = unwrap(gppriorrnd(gpstruct.prior,gpstruct.hyp(1)));
+            theta0 = unwrap2vec(gppriorrnd(gpstruct.prior,gpstruct.hyp(1)));
             
             % Mean parameter
             %mu = median(gpstruct.y);
             %sigma = std(gpstruct.y);
             %theta0(end) = sigma*randn() + mu;
             
-            thetaold = unwrap(hyp);
+            thetaold = unwrap2vec(hyp);
             theta0 = 0.5*(theta0 + thetaold);
             
             % Try increase starting point of noise
@@ -177,7 +177,7 @@ for iRun = 1:Nruns
     if ~success_vec(iRun)
         if isfield(options,'gpWarnings') && ~isempty(options.gpWarnings) ...
                 && options.gpWarnings
-            warning(['Failed optimization of hyper-parameters (' num2str(nTry) ' attempts). GP approximation might be unreliable.']);
+            warning('bads:gpHyperOptFail', ['Failed optimization of hyper-parameters (' num2str(nTry) ' attempts). GP approximation might be unreliable.']);
         end
         
         if 0
@@ -193,7 +193,7 @@ for iRun = 1:Nruns
 end
 
 [~,index] = min(fval);
-newtheta = unwrap(gpstruct.hyp(1));
+newtheta = unwrap2vec(gpstruct.hyp(1));
 newtheta(~fixed) = theta(:,index);
 hyp = rewrap(gpstruct.hyp(1), newtheta);
 
@@ -286,7 +286,7 @@ end
 function [nlZ, dnlZ, HnlZ] = gp_optimizer(theta, fixed, gpstruct)
 %GP_OPTIMIZER Wrapper function for GP optimization
 
-newtheta = unwrap(gpstruct.hyp(1));
+newtheta = unwrap2vec(gpstruct.hyp(1));
 newtheta(~fixed) = theta;
 thetastruct = rewrap(gpstruct.hyp(1), newtheta);
 
@@ -307,7 +307,7 @@ elseif nargout > 2
     HnlZ(:,fixed) = [];
 end
 
-dnlZ = unwrap(dnlZ);
+dnlZ = unwrap2vec(dnlZ);
 dnlZ(fixed) = [];
     
 end

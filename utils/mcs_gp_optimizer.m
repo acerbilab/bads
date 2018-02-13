@@ -10,7 +10,7 @@ lik = gpstruct.lik;
 x = gpstruct.x;
 y = gpstruct.y;
 
-newtheta = unwrap(hyp);
+newtheta = unwrap2vec(hyp);
 newtheta(~fixed) = theta;
 theta = rewrap(hyp, newtheta);
 
@@ -31,7 +31,7 @@ elseif nargout > 2
     HnlZ(:,fixed) = [];
 end
 
-dnlZ = unwrap(dnlZ);
+dnlZ = unwrap2vec(dnlZ);
 dnlZ(fixed) = [];
 
 end
