@@ -16,6 +16,8 @@ BADS is recommended when no gradient information is available, and the objective
 
 BADS requires no specific tuning and runs off-the-shelf like other built-in MATLAB optimizers such as `fminsearch`.
 
+If you are interested in estimating posterior distributions (i.e., uncertainty and error bars) over parameters, and not just point estimtes, you might want to check out [Variational Bayesian Monte Carlo](https://github.com/lacerbi/vbmc), a toolbox for Bayesian posterior and model inference which can be used in synergy with BADS.
+
 ## Installation
 
 [**Download the latest version of BADS as a ZIP file**](https://github.com/lacerbi/bads/archive/master.zip).
