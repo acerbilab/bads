@@ -1,8 +1,9 @@
 # Bayesian Adaptive Direct Search (BADS) - v1.0.5
 
 **News:** 
-- The BADS paper [[1](#reference)] has been accepted for a poster presentation at [NIPS 2017](https://papers.nips.cc/paper/6780-practical-bayesian-optimization-for-model-fitting-with-bayesian-adaptive-direct-search)! (20.9% acceptance rate this year, for a total of 3240 submissions)
-- BADS will be also presented at the NIPS workshop on Bayesian optimization for science and engineering, [BayesOpt 2017](https://bayesopt.github.io/).
+- I recently released [Variational Bayesian Monte Carlo (VBMC)](https://github.com/lacerbi/vbmc), a new toolbox for Bayesian posterior and model inference published at NeurIPS 2018 that you should check out!
+- The BADS paper [[1](#reference)] has been accepted for a poster presentation at [NeurIPS 2017](https://papers.nips.cc/paper/6780-practical-bayesian-optimization-for-model-fitting-with-bayesian-adaptive-direct-search)! (20.9% acceptance rate this year, for a total of 3240 submissions)
+- BADS has also been presented at the NeurIPS workshop on Bayesian optimization for science and engineering, [BayesOpt 2017](https://bayesopt.github.io/).
 
 ## What is it
 
@@ -14,6 +15,8 @@ In our benchmark with real model-fitting problems, BADS performed on par or bett
 BADS is recommended when no gradient information is available, and the objective function is non-analytical or *noisy*, for example evaluated through numerical approximation or via simulation.
 
 BADS requires no specific tuning and runs off-the-shelf like other built-in MATLAB optimizers such as `fminsearch`.
+
+If you are interested in estimating posterior distributions (i.e., uncertainty and error bars) over parameters, and not just point estimtes, you might want to check out [Variational Bayesian Monte Carlo](https://github.com/lacerbi/vbmc), a toolbox for Bayesian posterior and model inference which can be used in synergy with BADS.
 
 ## Installation
 
