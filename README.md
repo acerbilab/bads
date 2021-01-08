@@ -1,7 +1,7 @@
-# Bayesian Adaptive Direct Search (BADS) - v1.0.5
+# Bayesian Adaptive Direct Search (BADS) - v1.0.9
 
 **News:** 
-- I recently released [Variational Bayesian Monte Carlo (VBMC)](https://github.com/lacerbi/vbmc), a new toolbox for Bayesian posterior and model inference published at NeurIPS 2018 that you should check out!
+- If you are interested in Bayesian model fitting, check out [Variational Bayesian Monte Carlo (VBMC)](https://github.com/lacerbi/vbmc), a simple and user-friendly toolbox for Bayesian posterior and model inference that we published at NeurIPS (2018, 2020).
 - The BADS paper [[1](#reference)] has been accepted for a poster presentation at [NeurIPS 2017](https://papers.nips.cc/paper/6780-practical-bayesian-optimization-for-model-fitting-with-bayesian-adaptive-direct-search)! (20.9% acceptance rate this year, for a total of 3240 submissions)
 - BADS has also been presented at the NeurIPS workshop on Bayesian optimization for science and engineering, [BayesOpt 2017](https://bayesopt.github.io/).
 
