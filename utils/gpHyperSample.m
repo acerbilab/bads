@@ -149,9 +149,9 @@ end
         % hyp.lik = max(hyp.lik,-5);
         
         if nargout == 1
-            nlZ = gp(hyp,gpstruct.inf,gpstruct.meanfunc,gpstruct.covfunc,gpstruct.likfunc,gpstruct.x,gpstruct.y);            
+            nlZ = gp(hyp,gpstruct.inf,gpstruct.meanfunc,gpstruct.covfunc,gpstruct.likfunc,gpstruct.x,gpstruct.y,gpstruct.s);            
         else
-            [nlZ,ndlZstruct] = gp(hyp,gpstruct.inf,gpstruct.meanfunc,gpstruct.covfunc,gpstruct.likfunc,gpstruct.x,gpstruct.y);
+            [nlZ,ndlZstruct] = gp(hyp,gpstruct.inf,gpstruct.meanfunc,gpstruct.covfunc,gpstruct.likfunc,gpstruct.x,gpstruct.y,gpstruct.s);
             
             dlZ = ndlZstruct.cov(:);
             if ~NoiseKnown; dlZ = [dlZ; ndlZstruct.lik(:)]; end

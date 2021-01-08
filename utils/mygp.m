@@ -1,4 +1,4 @@
-function [varargout] = mygp(hyp, inf, mean, cov, lik, x, y, xs, ys)
+function [varargout] = mygp(hyp, inf, mean, cov, lik, x, y, s, xs, ys, ss)
 % Gaussian Process inference and prediction. The gp function provides a
 % flexible framework for Bayesian inference and prediction with Gaussian
 % processes for scalar targets, i.e. both regression and binary
@@ -13,9 +13,9 @@ function [varargout] = mygp(hyp, inf, mean, cov, lik, x, y, xs, ys)
 % the hyperparameters. If test cases are given, then the test set predictive
 % probabilities are returned. Usage:
 %
-%   training: [nlZ dnlZ          ] = gp(hyp, inf, mean, cov, lik, x, y);
-% prediction: [ymu ys2 fmu fs2   ] = gp(hyp, inf, mean, cov, lik, x, y, xs);
-%         or: [ymu ys2 fmu fs2 lp] = gp(hyp, inf, mean, cov, lik, x, y, xs, ys);
+%   training: [nlZ dnlZ          ] = gp(hyp, inf, mean, cov, lik, x, y, s);
+% prediction: [ymu ys2 fmu fs2   ] = gp(hyp, inf, mean, cov, lik, x, y, s, xs);
+%         or: [ymu ys2 fmu fs2 lp] = gp(hyp, inf, mean, cov, lik, x, y, s, xs, ys, ss);
 %
 % where:
 %
@@ -26,8 +26,10 @@ function [varargout] = mygp(hyp, inf, mean, cov, lik, x, y, xs, ys)
 %   lik      likelihood function
 %   x        n by D matrix of training inputs
 %   y        column vector of length n of training targets
+%   s        column vector of length n of observation SDs (can be empty)
 %   xs       ns by D matrix of test inputs
 %   ys       column vector of length nn of test targets
+%   ss       column vector of length nn of test SDs (can be empty)
 %
 %   nlZ      returned value of the negative log marginal likelihood
 %   dnlZ     struct of column vectors of partial derivatives of the negative
@@ -46,12 +48,14 @@ function [varargout] = mygp(hyp, inf, mean, cov, lik, x, y, xs, ys)
 %
 % Copyright (c) by Carl Edward Rasmussen and Hannes Nickisch, 2015-07-13.
 %                                      File automatically generated using noweb.
-if nargin<7 || nargin>9
-  disp('Usage: [nlZ dnlZ          ] = gp(hyp, inf, mean, cov, lik, x, y);')
-  disp('   or: [ymu ys2 fmu fs2   ] = gp(hyp, inf, mean, cov, lik, x, y, xs);')
-  disp('   or: [ymu ys2 fmu fs2 lp] = gp(hyp, inf, mean, cov, lik, x, y, xs, ys);')
+if nargin<8 || nargin>11
+  disp('Usage: [nlZ dnlZ          ] = gp(hyp, inf, mean, cov, lik, x, y, s);')
+  disp('   or: [ymu ys2 fmu fs2   ] = gp(hyp, inf, mean, cov, lik, x, y, s, xs);')
+  disp('   or: [ymu ys2 fmu fs2 lp] = gp(hyp, inf, mean, cov, lik, x, y, ,s, xs, ys, ss);')
   return
 end
+
+computeml_flag = nargin == 8;    % Compute negative marginal likelihood
 
 if isempty(mean), mean = {@meanZero}; end                     % set default mean
 if ischar(mean) || isa(mean, 'function_handle'), mean = {mean}; end  % make cell
@@ -114,29 +118,29 @@ try                                                  % call the inference method
       end
     end
   end
-  if nargin>7   % compute marginal likelihood and its derivatives only if needed
+  if ~computeml_flag   % compute marginal likelihood and its derivatives only if needed
     if isstruct(y)
       post = y;            % reuse a previously computed posterior approximation
     else
-      post = feval(inf{:}, hyp, mean, cov, lik, x, y);
+      post = feval(inf{:}, hyp, mean, cov, lik, x, y, s);
     end
   else
     if nargout<=1
-      [post nlZ] = feval(inf{:}, hyp, mean, cov, lik, x, y); dnlZ = {};
+      [post nlZ] = feval(inf{:}, hyp, mean, cov, lik, x, y, s); dnlZ = {};
     else
-      [post nlZ dnlZ] = feval(inf{:}, hyp, mean, cov, lik, x, y);      
+      [post nlZ dnlZ] = feval(inf{:}, hyp, mean, cov, lik, x, y, s);      
     end
   end
 catch
   msgstr = lasterr;
-  if nargin>7, error('Inference method failed [%s]', msgstr); else 
+  if ~computeml_flag, error('Inference method failed [%s]', msgstr); else 
     warning('Inference method failed [%s] .. attempting to continue',msgstr)
     dnlZ = struct('cov',0*hyp.cov, 'mean',0*hyp.mean, 'lik',0*hyp.lik);
     varargout = {NaN, dnlZ}; return                    % continue with a warning
   end
 end
 
-if nargin==7                                     % if no test cases are provided
+if computeml_flag                   % if no test cases are provided
   varargout = {nlZ, dnlZ, post};    % report -log marg lik, derivatives and post
 else
   alpha = post.alpha; L = post.L; sW = post.sW;
@@ -182,20 +186,22 @@ else
     end
     fs2(id) = max(fs2(id),0);   % remove numerical noise i.e. negative variances
     Fs2 = repmat(fs2(id),1,N);     % we have multiple values in case of sampling
-    if nargin<9
-      [Lp, Ymu, Ys2] = feval(lik{:},hyp.lik,[],   Fmu(:),Fs2(:));
+    if nargin<10
+      [Lp, Ymu, Ys2] = feval(lik{:},hyp.lik,[],[],   Fmu(:),Fs2(:));
     else
       Ys = repmat(ys(id),1,N);
-      [Lp, Ymu, Ys2] = feval(lik{:},hyp.lik,Ys(:),Fmu(:),Fs2(:));
+      if ~isempty(ss); Ss = repmat(ss(id),1,N); else; Ss = []; end
+      [Lp, Ymu, Ys2] = feval(lik{:},hyp.lik,Ys(:),Ss(:),Fmu(:),Fs2(:));
     end
     lp(id)  = sum(reshape(Lp, [],N),2)/N;    % log probability; sample averaging
     ymu(id) = sum(reshape(Ymu,[],N),2)/N;          % predictive mean ys|y and ..
     ys2(id) = sum(reshape(Ys2,[],N),2)/N;                          % .. variance
     nact = id(end);          % set counter to index of last processed data point
   end
-  if nargin<9
+  if nargin<10
     varargout = {ymu, ys2, fmu, fs2, [], post};        % assign output arguments
   else
+      warning('This needs to be fixed.');
     varargout = {ymu, ys2, fmu, fs2, lp, post};
   end
 end

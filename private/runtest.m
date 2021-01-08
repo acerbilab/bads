@@ -8,28 +8,34 @@ function failed = runtest()
 
 nvars = 3;                              % Number of dimensions
 x0 = 4*ones(1,nvars);                  % Initial point
-tolerr = [0.1 0.1 1];                   % Error tolerance
+tolerr = [0.1 0.1 1 1];                   % Error tolerance
 
 txt{1} = 'Test with deterministic function (ellipsoid)';
 fprintf('%s.\n', txt{1});
 fun = @(x) sum((x./(1:numel(x)).^2).^2);     % Objective function
-[exitflag(1),err(1)] = testblock(fun,[],[],x0,0);
+[exitflag(1),err(1)] = testblock(fun,[],[],x0,0,0);
 
 txt{2} = 'Test with deterministic function (sphere) and non-bound constraints';
 fprintf('%s.\n', txt{2});
 fun = @(x) sum(x.^2,2);
 nonbcon = @(x) x(:,1) + x(:,2) < sqrt(2);     % Non-bound constraints
-[exitflag(2),err(2)] = testblock(fun,[],nonbcon,x0,1);
+[exitflag(2),err(2)] = testblock(fun,[],nonbcon,x0,1,0);
 
 txt{3} = 'Test with noisy function (noisy sphere)';
 fprintf('%s.\n', txt{3});
 fun = @(x) sum(x.^2) + randn();             % Noisy objective function
 truefun = @(x) sum(x.^2);
-[exitflag(3),err(3)] = testblock(fun,truefun,[],x0,0);
+[exitflag(3),err(3)] = testblock(fun,truefun,[],x0,0,0);
+
+txt{4} = 'Test with heteroskedastic, specified noisy function (noisy sphere)';
+fprintf('%s.\n', txt{4});
+fun = @henoisysphere;           % Heteroskedastic noisy objective function
+truefun = @(x) sum(x.^2);
+[exitflag(4),err(4)] = testblock(fun,truefun,[],x0,0,1);
 
 failed = 0;
 fprintf('===========================================================================\n');
-for i = 1:3
+for i = 1:4
     fprintf('%s:', txt{i});
     if exitflag(i) >= 0 && err(i) < tolerr(i)
         fprintf('\tPASSED\n');
@@ -73,7 +79,7 @@ end
 end
 
 %--------------------------------------------------------------------------
-function [exitflag,err] = testblock(fun,truefun,nonbcon,x0,fmin)
+function [exitflag,err] = testblock(fun,truefun,nonbcon,x0,fmin,henoise_flag)
 
 nvars = numel(x0);
 LB = -100*ones(1,nvars);                % Lower bound
@@ -82,8 +88,13 @@ PLB = -8*ones(1,nvars);                 % Plausible lower bound
 PUB = 12*ones(1,nvars);                 % Plausible upper bound
 
 options = bads('defaults');             % Default options
-options.MaxFunEvals = 50;
 
+if henoise_flag
+    options.SpecifyTargetNoise = true;
+    options.MaxFunEvals = 200;
+else
+    options.MaxFunEvals = 100;    
+end
 [x,fval,exitflag,output] = bads(fun,x0,LB,UB,PLB,PUB,nonbcon,options);
 
 if isempty(truefun)
@@ -95,4 +106,13 @@ else
     err = abs(fval_true - fmin);
 end
 fprintf('\n');
+end
+
+%--------------------------------------------------------------------------
+function [y,s] = henoisysphere(x)
+
+y = sum(x.^2);
+s = 2 + 1*sqrt(y);
+y = y + s*randn();
+
 end

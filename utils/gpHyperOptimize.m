@@ -71,9 +71,9 @@ for iRun = 1:Nruns
         if size(gpstruct.y,1) < nvars; break; end
         
         try
-            tic
+            t_opt = tic;
             [theta(:,iRun),fval(iRun)] = optfunc(theta0,OptOptions);
-            t1 = toc;
+            t1 = toc(t_opt);
 
             if 0
                 gpstruct.fixed = fixed;
@@ -92,9 +92,9 @@ for iRun = 1:Nruns
                 end
                 optfunc2 = @(x0_,opt_) fmincon(func,x0_,[],[],[],[],lb(~fixed),ub(~fixed),[],opt_);
 
-                tic
+                t_opt2 = tic;
                 [xbest2,fval2] = optfunc2(theta0,OptOptions);
-                t2 = toc;
+                t2 = toc(t_opt2);
                 [t1 t2]
                 [fval(iRun) fval2]
             end
@@ -290,7 +290,7 @@ newtheta = unwrap2vec(gpstruct.hyp(1));
 newtheta(~fixed) = theta;
 thetastruct = rewrap(gpstruct.hyp(1), newtheta);
 
-f = @() (feval(gpstruct.inf{:}, thetastruct, gpstruct.mean, gpstruct.cov, gpstruct.lik, gpstruct.x, gpstruct.y));
+f = @() (feval(gpstruct.inf{:}, thetastruct, gpstruct.mean, gpstruct.cov, gpstruct.lik, gpstruct.x, gpstruct.y, gpstruct.s));
 
 if nargout <= 1
     [~, nlZ] = f();

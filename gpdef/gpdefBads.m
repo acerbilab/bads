@@ -11,6 +11,12 @@ gaussPriorFunc = @priorGauss;
 
 covard = covextras(1);   % First covariance flag (ARD covariance)
 
+if options.SpecifyTargetNoise    
+    NoiseSize = TolFun;    % Additional jitter to specified noise
+else
+    NoiseSize = options.NoiseSize;
+end
+
 % Initialize new GP struct
 if isempty(gpstruct)
 
@@ -137,9 +143,12 @@ if isempty(gpstruct)
             gpstruct.bounds.lik{end+1} = [-Inf; Inf];
             gpstruct.bounds.lik{end+1} = [-Inf; Inf];        
         end
+    elseif options.SpecifyTargetNoise
+        % Input-dependent (heteroskedastic) Gaussian likelihood
+        gpstruct.lik = @likGaussHe;        
     else
-        % Default Gaussian likelihood
-        gpstruct.lik = @likGauss;
+        % Default Gaussian likelihood (still uses heteroskedastic function)
+        gpstruct.lik = @likGaussHe;
     end
     
     if ~isempty(gplik)   % Known noise level
@@ -150,9 +159,9 @@ if isempty(gpstruct)
 
     else                % Unknown noise level (even for deterministic functions, helps regularization)
         % likmu = log(1); liks2 = 1^2;
-        likmu = log(options.NoiseSize(1));
-        if numel(options.NoiseSize) > 1 && isfinite(options.NoiseSize(2))
-            liks2 = options.NoiseSize(2)^2;
+        likmu = log(NoiseSize(1));
+        if numel(NoiseSize) > 1 && isfinite(NoiseSize(2))
+            liks2 = NoiseSize(2)^2;
         else
             liks2 = 1^2;
         end
@@ -209,7 +218,7 @@ else    % Update existing GP struct
     %% Update empirical prior for GP likelihood
     
     % Likelihood prior (scales with mesh size)
-    gpstruct.prior.lik{end}{2} = log(options.NoiseSize(1)) + options.MeshNoiseMultiplier*log(MeshSize);
+    gpstruct.prior.lik{end}{2} = log(NoiseSize(1)) + options.MeshNoiseMultiplier*log(MeshSize);
     % gpstruct.prior.lik{end}{2} = min(log(TolFun),log(MeshSize));
     
     if options.WarpFunc > 0     % Warped likelihood (unsupported)

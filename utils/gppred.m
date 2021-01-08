@@ -81,10 +81,10 @@ function [ymui,ys2i,fmui,fs2i] = gppred1(X,xi,gpstruct,hyp,post)
     else
         if ~isempty(post)
             [ymui,ys2i,fmui,fs2i] = mygp(hyp,gpstruct.inf,gpstruct.mean,gpstruct.cov, ...
-        gpstruct.lik,X,post,xi);
+        gpstruct.lik,X,post,gpstruct.s,xi);
         else
             [ymui,ys2i,fmui,fs2i] = mygp(hyp,gpstruct.inf,gpstruct.mean,gpstruct.cov, ...
-        gpstruct.lik,X,gpstruct.y,xi);
+        gpstruct.lik,X,gpstruct.y,gpstruct.s,xi);
         end
         
         % Recompute noiseless prediction if non-standard likelihood (e.g. warped gp)

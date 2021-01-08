@@ -77,10 +77,10 @@ function yy = gpfunc(xi,gpstruct,hyp)
         
         if isfield(gpstruct,'post') && ~isempty(gpstruct.post)
             [ymui,ys2i,fmui,fs2i] = mygp(hyp,gpstruct.inf,gpstruct.mean,gpstruct.cov, ...
-        gpstruct.lik,gpstruct.x,gpstruct.post,xi);
+        gpstruct.lik,gpstruct.x,gpstruct.post,gpstruct.s,xi);
         else
             [ymui,ys2i,fmui,fs2i] = mygp(hyp,gpstruct.inf,gpstruct.mean,gpstruct.cov, ...
-        gpstruct.lik,gpstruct.x,gpstruct.y,xi);
+        gpstruct.lik,gpstruct.x,gpstruct.y,gpstruct.s,xi);
         end
         
         if 1
@@ -88,7 +88,7 @@ function yy = gpfunc(xi,gpstruct,hyp)
             
             lik = hyp.lik; lik(end) = -Inf;
             % fmuiold = fmui; fs2iold = fs2i;
-            [~, fmui, fs2i] = feval(gpstruct.lik{:}, lik, [], fmui, fs2i);
+            [~, fmui, fs2i] = feval(gpstruct.lik{:}, lik, [], [], fmui, fs2i);
         end
         
         yy = [ymui,ys2i,fmui,fs2i];

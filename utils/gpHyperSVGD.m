@@ -83,7 +83,7 @@ end
     %GP_OPTIMIZER Wrapper function for GP optimization
 
         newtheta = unwrap2vec(gpstruct.hyp(1));
-        f = @(thetastr) (feval(gpstruct.inf{:}, thetastr, gpstruct.mean, gpstruct.cov, gpstruct.lik, gpstruct.x, gpstruct.y));
+        f = @(thetastr) (feval(gpstruct.inf{:}, thetastr, gpstruct.mean, gpstruct.cov, gpstruct.lik, gpstruct.x, gpstruct.y, gpstruct.s));
         kk = numel(theta)/Nsamples;
         dlZ = [];
 

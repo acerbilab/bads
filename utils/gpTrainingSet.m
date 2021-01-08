@@ -2,8 +2,8 @@ function [gpstruct,exitflag] = gpTrainingSet(gpstruct,method,uc,ui,optimState,op
 %GPTRAININGSET Update training input set of Gaussian Process.
 %   GPSTRUCT = GPTRAININGSET(GPSTRUCT,'add',UNEW,FVAL,OPTIMSTATE,OPTIONS)
 %   adds point UNEW with function value FVAL to the training set of GP 
-%   structure GPSTRUCT. If OPTIONS.NoiseObj is on, FVAL(1) is the estimated
-%   function value and FVAL(2) the standard deviation of the estimate.
+%   structure GPSTRUCT. If OPTIONS.SpecifyTargetNoise is on, FVAL(1) is the 
+%   estimated function value and FVAL(2) the standard deviation of the estimate.
 %   OPTIMSTATE is the optimization structure, and OPTIONS the options
 %   structure.
 %
@@ -43,7 +43,7 @@ switch (lower(method))
             ystar = ui(1);
         end
         try
-            if options.NoiseObj; ysd = ui(2); else ysd = []; end
+            if options.SpecifyTargetNoise; ysd = ui(2); else ysd = []; end
             gpstruct.post = update_posterior(gpstruct.hyp(1), gpstruct.mean, ...
                   gpstruct.cov, gpstruct.x, gpstruct.post, uc, ystar);          
             if rotategp_flag; uc = uc*gpstruct.C'; end     
@@ -52,12 +52,12 @@ switch (lower(method))
             % Check that the added value is well-defined
             if isfinite(ystar)
                 gpstruct.y = [gpstruct.y; ystar];
-                if options.NoiseObj; gpstruct.sd = [gpstruct.sd; ysd]; end
+                if options.SpecifyTargetNoise; gpstruct.s = [gpstruct.s; ysd]; end
                 gpstruct.erry = [gpstruct.erry; false];
             else
                 [ypenalty,idx] = max(gpstruct.y);
                 gpstruct.y = [gpstruct.y; ypenalty];
-                if options.NoiseObj; gpstruct.sd = [gpstruct.sd; gpstruct.sd(idx)]; end
+                if options.SpecifyTargetNoise; gpstruct.s = [gpstruct.s; gpstruct.s(idx)]; end
                 gpstruct.erry = [gpstruct.erry; true];
             end
             
@@ -93,7 +93,7 @@ switch (lower(method))
         
         gpstruct.x = U(ord(index),:);
         gpstruct.y = Y(ord(index),:);
-        if isfield(optimState,'S'); gpstruct.sd = S(ord(index),:); end
+        if isfield(optimState,'S'); gpstruct.s = S(ord(index),:); end
         
         
     case 'grid' % Add points closest to coordinate-wise neighbors
@@ -164,7 +164,7 @@ switch (lower(method))
         
         gpstruct.x = U(ord(index),:);
         gpstruct.y = Y(ord(index),:);
-        if isfield(optimState,'S'); gpstruct.sd = S(ord(index),:); end
+        if isfield(optimState,'S'); gpstruct.s = S(ord(index),:); end
         
     %----------------------------------------------------------------------    
     case 'covgrid'
@@ -230,7 +230,7 @@ switch (lower(method))
         
         gpstruct.x = U(ord(index),:);
         gpstruct.y = Y(ord(index),:);           
-        if isfield(optimState,'S'); gpstruct.sd = S(ord(index),:); end
+        if isfield(optimState,'S'); gpstruct.s = S(ord(index),:); end
 
     case 'nogrid'
                 
@@ -273,7 +273,7 @@ switch (lower(method))
         
         gpstruct.x = U(ord(index),:);
         gpstruct.y = Y(ord(index),:);
-        if isfield(optimState,'S'); gpstruct.sd = S(ord(index),:); end
+        if isfield(optimState,'S'); gpstruct.s = S(ord(index),:); end
         
         
     case 'neighborhood'
@@ -296,7 +296,7 @@ switch (lower(method))
         index = 1:ntrain;                    
         gpstruct.x = U(ord(index),:);
         gpstruct.y = Y(ord(index),:);           
-        if isfield(optimState,'S'); gpstruct.sd = S(ord(index),:); end        
+        if isfield(optimState,'S'); gpstruct.s = S(ord(index),:); end        
         
     case 'global'
 
@@ -346,7 +346,7 @@ if any(err_index)
     [ypenalty,idx1] = max(gpstruct.y(~err_index));
     idx_values = find(~error_index);
     gpstruct.y(err_index) = ypenalty;
-    if isfield(optimState,'S'); gpstruct.sd(err_index) = gpstruct.sd(idx_values(idx1)); end
+    if isfield(optimState,'S'); gpstruct.s(err_index) = gpstruct.s(idx_values(idx1)); end
 end
 
 % List of 'erroneous' points
@@ -449,9 +449,9 @@ end
 try
     % Recompute posterior
     Nsamples = numel(gpstruct.hyp);    
-    [~,~,~,~,~,gpstruct.post] = mygp(gpstruct.hyp(1),gpstruct.inf,gpstruct.mean,gpstruct.cov,gpstruct.lik,gpstruct.x,gpstruct.y,uc(1,:));    
+    [~,~,~,~,~,gpstruct.post] = mygp(gpstruct.hyp(1),gpstruct.inf,gpstruct.mean,gpstruct.cov,gpstruct.lik,gpstruct.x,gpstruct.y,gpstruct.s,uc(1,:));    
     for i = 2:Nsamples
-        [~,~,~,~,~,gpstruct.post(i)] = mygp(gpstruct.hyp(i),gpstruct.inf,gpstruct.mean,gpstruct.cov,gpstruct.lik,gpstruct.x,gpstruct.y,uc(1,:));
+        [~,~,~,~,~,gpstruct.post(i)] = mygp(gpstruct.hyp(i),gpstruct.inf,gpstruct.mean,gpstruct.cov,gpstruct.lik,gpstruct.x,gpstruct.y,gpstruct.s,uc(1,:));
     end
 catch
     % Posterior update failed
@@ -528,7 +528,7 @@ gpstruct.hypweight = hypw;         % Update samples weigths
 % Laplace approximation at MAP solution
 % if Nsamples == 0 && gpstruct.marginalize
 %     try
-%         [~,~,~,~,~,gpstruct.hypHessian] = feval(gpstruct.inf{:},gpstruct.hyp,gpstruct.mean,gpstruct.cov,gpstruct.lik,gpstruct.x,gpstruct.y);
+%         [~,~,~,~,~,gpstruct.hypHessian] = feval(gpstruct.inf{:},gpstruct.hyp,gpstruct.mean,gpstruct.cov,gpstruct.lik,gpstruct.x,gpstruct.y,gpstruct.s);
 %     catch
 %         gpstruct.hypHessian = [];
 %     end

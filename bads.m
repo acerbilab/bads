@@ -4,8 +4,8 @@ function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PU
 %       min F(X)  subject to:  LB <= X <= UB
 %        X                        C(X) <= 0        (optional)
 %
-%   X = BADS(FUN,X0,LB,UB) starts at X0 and finds a local minimum X to
-%   the function FUN. FUN accepts input X and returns a scalar function
+%   X = BADS(FUN,X0,LB,UB) starts at X0 and finds a local minimum X to the 
+%   target function FUN. FUN accepts input X and returns a scalar function
 %   value evaluated at X. X0 may be a scalar, vector or empty matrix. If X0 
 %   is empty, the starting point is chosen from the initial mesh only.
 %   LB and UB define a set of lower and upper bounds on the design 
@@ -97,14 +97,23 @@ function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PU
 %     returns X = [0 0].
 %
 %   To run BADS on a noisy (stochastic) objective function, set
-%       OPTIONS.UncertaintyHandling = 1
+%       OPTIONS.UncertaintyHandling = true
 %       OPTIONS.NoiseSize = SIGMA
 %   where SIGMA is an estimate of the SD of the noise in your problem in
 %   a good region of the parameter space. (If not specified, default 
-%   SIGMA = 1).
-%   Set OPTIONS.UncertaintyHandling = 0 for a deterministic function.
+%   SIGMA = 1). To help BADS work better, it is recommended that you
+%   provide to BADS an estimate of the noise at each location (see below).
+%
+%   Set OPTIONS.UncertaintyHandling = false for a deterministic function.
 %   If OPTIONS.UncertaintyHandling is not specified, BADS will determine at
 %   runtime if the objective function is noisy.
+%
+%   If you can estimate the SD of the noise at each input location, return
+%   the estimate as the *second output* of FUN. That is [FVAL,SD] = FUN(X)
+%   where FVAL is the observed (noisy) function value at X, and SD is the 
+%   estimated standard deviation of the observation at X. Then set
+%       OPTIONS.UncertaintyHandling = true
+%       OPTIONS.SpecifyTargetNoise = true
 %
 %   See BADS_EXAMPLES for more examples. The most recent version of the 
 %   algorithm and additional documentation can be found here:
@@ -123,11 +132,11 @@ function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PU
 % To be used under the terms of the GNU General Public License 
 % (http://www.gnu.org/copyleft/gpl.html).
 %
-%   Author (copyright): Luigi Acerbi, 2017
+%   Author (copyright): Luigi Acerbi, 2017-2021
 %   e-mail: luigi.acerbi@{gmail.com,nyu.edu}
 %   URL: http://luigiacerbi.com
-%   Version: 1.0.5
-%   Release date: Feb 13, 2018
+%   Version: 1.0.9
+%   Release date: Jan 8, 2020
 %   Code repository: https://github.com/lacerbi/bads
 %--------------------------------------------------------------------------
 
@@ -150,7 +159,8 @@ defopts.CompletePoll            = 'off          % Complete polling around the cu
 defopts.AccelerateMesh          = 'on           % Accelerate mesh contraction';
 defopts.OutputFcn               = '[]           % Output function'; 
 defopts.UncertaintyHandling     = '[]           % Explicit noise handling (if empty, determine at runtime)';
-defopts.NoiseSize               = '[]           % Base observation noise magnitude';
+defopts.NoiseSize               = '[]           % Base observation noise magnitude (SD)';
+defopts.SpecifyTargetNoise      = 'no           % Target function returns noise estimate (SD) as second output';
 defopts.NoiseFinalSamples       = '10           % Samples to estimate FVAL at the end (for noisy objectives)';
 defopts.OptimToolbox            = '[]           % Use Optimization Toolbox (if empty, determine at runtime)';
 
@@ -269,10 +279,8 @@ defopts.FitnessShaping          = 'off                  % Nonlinear rescaling of
 defopts.WarpFunc                = '0                    % GP warping function type';
 
 % Noise parameters
-defopts.NoiseObj                = 'off          % Objective fcn returns noise estimate as 2nd argument (unsupported)';
 defopts.UncertainIncumbent      = 'yes                  % Treat incumbent as if uncertain regardless of uncertainty handling';
 defopts.MeshNoiseMultiplier     = '0.5                  % Contribution to log noise magnitude from log mesh size (0 for noisy functions)';
-defopts.TrustGPfinal            = 'no                   % Use GP to compute final estimate';
 
 % Adaptive basis (unsupported)
 defopts.HessianUpdate           = 'no                   % Update Hessian as you go';
@@ -415,7 +423,7 @@ end
 optimState.nonbcon = nonbcon;
 
 % Initialize function logger
-[~,optimState] = funlogger([],u0,optimState,'init',options.CacheSize,options.NoiseObj);
+[~,optimState] = funlogger([],u0,optimState,'init',options.CacheSize,options.SpecifyTargetNoise);
 
 %% Initial function evaluations
 
@@ -451,7 +459,12 @@ else
 end
 
 if optimState.UncertaintyHandling  % Current uncertainty in estimate
-    fsd = options.NoiseSize(1);
+    if options.SpecifyTargetNoise
+        [~,idx] = min(optimState.Y);    % Assume the min has been picked
+        fsd = optimState.S(idx);
+    else
+        fsd = options.NoiseSize(1);
+    end
 else
     fsd = 0;
 end
@@ -1187,7 +1200,7 @@ x = origunits(u,optimState);
 if prnt > 1
     fprintf('\n%s\n', msg);    
     if optimState.UncertaintyHandling
-        if options.TrustGPfinal || numel(yval_vec) == 1
+        if numel(yval_vec) == 1
             fprintf('Observed function value at minimum: %g (1 sample). Estimated: %g ± %g (GP mean ± SEM).\n\n', yval_vec(1), fval, fsd);
         else
             fprintf('Estimated function value at minimum: %g ± %g (mean ± SEM from %d samples).\n\n', fval, fsd, numel(yval_vec));            
@@ -1200,10 +1213,14 @@ end
 if nargout > 3
     output.function = func2str(fun);    
     if optimState.UncertaintyHandling
-        output.targettype = 'stochastic';
-    else    
+        if options.SpecifyTargetNoise
+            output.targettype = 'stochastic (known noise)';
+        else
+            output.targettype = 'stochastic';
+        end
+    else
         output.targettype = 'deterministic';
-    end    
+    end   
     if all(isinf(LB)) && all(isinf(UB)) && isempty(nonbcon)
         output.problemtype = 'unconstrained';
     elseif isempty(nonbcon)
@@ -1509,37 +1526,9 @@ end
 % biased but better than having no uncertainty information)
 if numel(yval_vec) == 1; yval_vec = [yval_vec, yval]; end
 
-if options.TrustGPfinal
-    % Compute final estimate based on a refitted GP
-        
-    % Noise estimate as prior
-    options.NoiseSize(1) = std(yval_vec);
-    gpstruct.prior.lik{1}{2} = log(options.NoiseSize(1));
-    options.NoiseSize(2) = 1/sqrt(2*options.NoiseFinalSamples);
-    gpstruct.prior.lik{1}{3} = options.NoiseSize(2);
-    options.DoubleRefit = true;
-    gpstruct.bounds.lik{1} = [-Inf, Inf];
-
-    [gpstruct] = gpTrainingSet(gpstruct, ...
-        options.gpMethod, ...
-        u, ...
-        [], ...    %             [upoll; gridunits(x,optimState)], ...
-        optimState, ...
-        options, ...
-        1);
-
-    % Recompute estimated function value at point
-    [~,~,fval,fs2] = gppred(u,gpstruct);
-    if numel(gpstruct.hyp) > 1
-        fval = weightedsum(gpstruct.hypweight,fval,1);
-        fs2 = weightedsum(gpstruct.hypweight,fs2,1);
-    end    
-    fsd = sqrt(fs2);
-else
-    % No GP, simple mean and standard error of samples    
-    fval = mean(yval_vec);
-    fsd = std(yval_vec)/sqrt(numel(yval_vec));
-end
+% We do not trust the GP, simple mean and standard error of samples    
+fval = mean(yval_vec);
+fsd = std(yval_vec)/sqrt(numel(yval_vec));
 
 end
 %--------------------------------------------------------------------------

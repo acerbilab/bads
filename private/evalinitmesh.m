@@ -8,11 +8,11 @@ PUB = optimState.PUB;
 MeshSize = optimState.meshsize;
 
 % If the objective fcn returns estimated noise, UncertaintyHandling is ON
-if options.NoiseObj
+if options.SpecifyTargetNoise
     optimState.UncertaintyHandling = 1;
     if ~isempty(options.UncertaintyHandling) && ~options.UncertaintyHandling
-        error('OPTIONS.NoiseObj is ON (objective fcn with estimated noise output) but OPTIONS.UncertaintyHandling is OFF.');
-    end
+        error('OPTIONS.SpecifyTargetNoise is ON (objective fcn with estimated noise output) but OPTIONS.UncertaintyHandling is OFF.');
+    end    
 else
     optimState.UncertaintyHandling = options.UncertaintyHandling;
 end

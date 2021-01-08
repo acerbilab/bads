@@ -19,7 +19,7 @@ nvars = size(u,2);
 %UB = min(UB, u(:) + 2*MeshSize*SearchFactor);
 
 [~,~,ftarget,fs2,~,post] = mygp(gpstruct.hyp(1),gpstruct.inf,gpstruct.mean,gpstruct.cov, ...
-    gpstruct.lik,gpstruct.x,gpstruct.y,u);
+    gpstruct.lik,gpstruct.x,gpstruct.y,gpstruct.s,u);
 gpstruct.post = post;
 
 ftarget = ftarget - optimState.sdlevel*sqrt(fs2 + options.TolFun^2);

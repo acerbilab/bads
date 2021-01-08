@@ -1,4 +1,4 @@
-function [post nlZ dnlZ] = infExact_fastrobust(kmax, hyp, mean, cov, lik, x, y)
+function [post,nlZ,dnlZ] = infExact_fastrobust(kmax, hyp, mean, cov, lik, x, y, s)
 
 % Fast, robust inference for a GP with Gaussian likelihood. Compute a 
 % parametrization of the posterior, the negative log marginal likelihood 
@@ -25,8 +25,12 @@ function [post nlZ dnlZ] = infExact_fastrobust(kmax, hyp, mean, cov, lik, x, y)
 
 if iscell(lik), likstr = lik{1}; else likstr = lik; end
 if ~ischar(likstr), likstr = func2str(likstr); end
-if ~strcmp(likstr,'likGauss')               % NOTE: no explicit call to likGauss
-  error('Exact inference only possible with Gaussian likelihood');
+if strcmp(likstr,'likGauss')    % NOTE: no explicit call to likGauss
+    henoise_flag = false;
+elseif strcmp(likstr,'likGaussHe')
+    henoise_flag = true;        % Heteroskedastic noise    
+else
+    error('Exact inference only possible with Gaussian likelihood');
 end
 
 if isempty(kmax); kmax = 5; end
@@ -39,33 +43,38 @@ else
 end
 m = feval(mean{:}, hyp.mean, x);                          % evaluate mean vector
 
-sn2 = exp(2*hyp.lik);                               % noise variance of likGauss
+sn2_base = exp(2*hyp.lik);                               % noise variance of likGauss
 
-smallnoise = sn2 < 1e-6;       % very tiny sn2 can lead to numerical trouble
-
-if smallnoise
-    M = K+sn2*eye(n);           % Covariance with noise
+if henoise_flag && ~isempty(s)
+    % if isempty(s); error('Input-dependent vector S is empty.'); end
+    sn2 = sn2_base + s.^2;                               % Vector of observation variance
 else
-    M = K/sn2+eye(n);           % B matrix
+    sn2 = sn2_base;
 end
+
+Lchol = min(sn2) >= 1e-6;       % tiny sn2 can lead to numerical trouble
+
+% smallnoise = sn2 < 1e-6;       
+if Lchol
+    if isscalar(sn2)
+        sn2div = sn2;
+        sn2_mat = eye(n);
+    else
+        sn2div = min(sn2);
+        sn2_mat = diag(sn2/sn2div);
+    end    
+    
+    M = K/sn2div+sn2_mat;       % B matrix
+else
+    if isscalar(sn2)
+        sn2_mat = sn2*eye(n);
+    else
+        sn2_mat = diag(sn2);
+    end
+    M = K+sn2_mat;           % Covariance with noise
+end
+
 [L,p] = chol(M);                % Try computing Cholesky factor
-
-% M
-%[V,D] = eig(M);
-% V(:,1)'
-%if D(1,1) < 0
-%    M/max(M(:))
-%   diag(D) 
-%   V(:,1)
-%   sn2
-%   pause
-%end
-
-%[D(1,1)/D(2,2)]
-%[D(1,1),D(2,2),sn2]
-
-% log10(diag(lambda))'
-% max(lambda)/min(lambda)
 
 if p~=0     % Failed Cholesky decomposition, compute nearest SPD matrix
     if kmax <= 0; error('Cannot compute Cholesky decomposition.'); end
@@ -83,18 +92,9 @@ if p~=0     % Failed Cholesky decomposition, compute nearest SPD matrix
         % We do not want to change the matrix too much
         if k > kmax-1; error('Cannot compute Cholesky decomposition.'); end        
         lambda = eig(M);        
-        mineig = min(lambda);
-
-        %mineigold = log10(abs(min(eig(Mold))));
-       
-        %[log10(abs(max(lambda))),log10(abs(mineig)),mineigold,log10(sn2)]
+        mineig = min(lambda);       
         kappa = 0.05;        % Sometimes even a small nudge is sufficient
-        % kappa = 0.125;      % Sometimes even a small nudge is sufficient
-        % M = M + (-kappa*mineig*k.^2 + eps(mineig))*eye(size(M));        
-        % M = M + (-kappa*mineig*k.^2 + sqrt(eps)*mineig)*eye(size(M));        
         M = M + kappa*abs(mineig)*k.^2*eye(size(M));
-        % M = M + kappa*mineig*k.^2*eye(size(M));
-        % k, [lambda';eig(M)']
         [L,p] = chol(M);
     end
     
@@ -102,19 +102,20 @@ if p~=0     % Failed Cholesky decomposition, compute nearest SPD matrix
     
 end
 
-if smallnoise
+if Lchol
+    sl = sn2div;
+    pL = L;                         % L = chol(eye(n)+sW*sW'.*K)
+else
     sl = 1;
     pL = -solve_chol(L,eye(n));     % L = -inv(K+inv(sW^2))
-else
-    sl = sn2;
-    pL = L;                         % L = chol(eye(n)+sW*sW'.*K)
 end
 
 alpha = solve_chol(L,y-m)/sl;
 
 post.alpha = alpha;                            % return the posterior parameters
-post.sW = ones(n,1)/sqrt(sn2);                  % sqrt of noise precision vector
+post.sW = ones(n,1)/sqrt(min(sn2));            % sqrt of noise precision vector
 post.L = pL;
+post.Lchol = Lchol;
 
 if nargout>1                               % do we want the marginal likelihood?
   nlZ = (y-m)'*alpha/2 + sum(log(diag(L))) + n*log(2*pi*sl)/2;   % -log marg lik
@@ -124,7 +125,7 @@ if nargout>1                               % do we want the marginal likelihood?
     for i = 1:numel(hyp.cov)
       dnlZ.cov(i) = sum(sum(Q.*dK(:,:,i)))/2;
     end
-    dnlZ.lik = sn2*trace(Q);
+    dnlZ.lik = sn2_base*trace(Q);
     for i = 1:numel(hyp.mean)
       dnlZ.mean(i) = -feval(mean{:}, hyp.mean, x, i)'*alpha;
     end

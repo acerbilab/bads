@@ -30,12 +30,12 @@ switch lower(state)
         nvars = numel(u);
 
         % Number of stored function values
-        if nargin > 4; nmax = varargin{1}; else nmax = []; end
+        if nargin > 4; nmax = varargin{1}; else; nmax = []; end
         if isempty(nmax); nmax = 1e4; end
         
-        % Heteroscedastic noise
-        if nargin > 5; hescnoise = varargin{2}; else hescnoise = []; end
-        if isempty(hescnoise); hescnoise = 0; end
+        % Heteroscedastic noise provided as 2nd output argument of FUN?
+        if nargin > 5; henoise_flag = varargin{2}; else; henoise_flag = []; end
+        if isempty(henoise_flag); henoise_flag = false; end
 
         optimState.funccount = 0;
 
@@ -44,7 +44,7 @@ switch lower(state)
             optimState.X = NaN(nmax,nvars);
             optimState.U = NaN(nmax,nvars);
             optimState.Y = NaN(nmax,1);
-            if hescnoise; optimState.S = NaN(nmax,1); end
+            if henoise_flag; optimState.S = NaN(nmax,1); end
             optimState.Xn = 0;                    % Last filled entry
             optimState.Xmax = 0;                  % Maximum entry index
 
@@ -63,7 +63,7 @@ switch lower(state)
                 optimState.X = optimState.X(end-nmax+1:end,:);
                 optimState.Y = circshift(optimState.Y,-optimState.Xn);
                 optimState.Y = optimState.Y(end-nmax+1:nmax,:);
-                if hescnoise
+                if henoise_flag
                     optimState.S = circshift(optimState.S,-optimState.Xn);
                     optimState.S = optimState.S(end-nmax+1:nmax,:);
                 end
@@ -73,7 +73,7 @@ switch lower(state)
                 offset = nmax - size(optimState.X,1);
                 optimState.X = [optimState.X; NaN(offset,nvars)];
                 optimState.Y = [optimState.Y; NaN(offset,1)];
-                if hescnoise
+                if henoise_flag
                     optimState.S = [optimState.S; NaN(offset,1)];
                 end                
             end
@@ -86,16 +86,16 @@ switch lower(state)
 
         x = origunits(u,optimState);    % Convert back to original space
         % Heteroscedastic noise?
-        if isfield(optimState,'S'); hescnoise = 1; else hescnoise = 0; end
+        henoise_flag = isfield(optimState,'S');
         
         try
-            tic
-            if hescnoise
+            t_fun = tic;
+            if henoise_flag
                 [fval,fsd] = fun(x);
             else
                 fval = fun(x);
             end
-            t = toc;
+            t = toc(t_fun);
             
             % Check returned function value
             if ~isscalar(fval) || ~isfinite(fval) || ~isreal(fval)
@@ -103,7 +103,7 @@ switch lower(state)
             end
             
             % Check returned function SD
-            if hescnoise && (~isscalar(fsd) || ~isfinite(fsd) || ~isreal(fsd) || fsd <= 0.0)
+            if henoise_flag && (~isscalar(fsd) || ~isfinite(fsd) || ~isreal(fsd) || fsd <= 0.0)
                 error(['The returned estimated SD (second function output) must be a finite, non-negative real-valued scalar (returned SD: ' mat2str(fsd) ').']);
             end            
             
@@ -120,7 +120,7 @@ switch lower(state)
             optimState.X(optimState.Xn,:) = x;
             optimState.U(optimState.Xn,:) = u;
             optimState.Y(optimState.Xn) = fval;
-            if hescnoise
+            if henoise_flag
                 optimState.S(optimState.Xn) = fsd;            
             end
             optimState.funevaltime(optimState.Xn) = t;
@@ -129,17 +129,17 @@ switch lower(state)
         
     case 'done' % Finalize stored table
         
-        if isfield(optimState,'S'); hescnoise = 1; else hescnoise = 0; end
+        henoise_flag = isfield(optimState,'S');
         
         if optimState.Xmax < size(optimState.X,1)
             optimState.X = optimState.X(1:optimState.Xmax,:);
             optimState.Y = optimState.Y(1:optimState.Xmax);
-            if hescnoise; optimState.S = optimState.S(1:optimState.Xmax); end
+            if henoise_flag; optimState.S = optimState.S(1:optimState.Xmax); end
             optimState.funevaltime = optimState.funevaltime(1:optimState.Xmax);
         else
             optimState.X = circshift(optimState.X,-optimState.Xn);
             optimState.Y = circshift(optimState.Y,-optimState.Xn);
-            if hescnoise; optimState.S = circshift(optimState.S,-optimState.Xn); end
+            if henoise_flag; optimState.S = circshift(optimState.S,-optimState.Xn); end
             optimState.funevaltime = circshift(optimState.funevaltime,-optimState.Xn);        
         end
         optimState = rmfield(optimState,'U');
