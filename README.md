@@ -46,6 +46,8 @@ For more usage examples, see [**bads_examples.m**](https://github.com/lacerbi/ba
 
 For practical recommendations, such as how to set `LB` and `UB`, and any other question, check out the FAQ on the [BADS wiki](https://github.com/lacerbi/bads/wiki).
 
+*Note*: BADS is a *semi-local* optimization algorithm, in that it can escape local minima better than many other methods — but it can still get stuck. The best performance for BADS is obtained by running the algorithm multiple times from distinct starting points (see [here](https://github.com/lacerbi/bads/wiki#how-do-i-choose-the-starting-point-x0)).
+
 ## How does it work
 
 BADS follows a [mesh adaptive direct search](http://epubs.siam.org/doi/abs/10.1137/040603371) (MADS) procedure for function minimization that alternates **poll** steps and **search** steps (see **Fig 1**). 
