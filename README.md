@@ -66,7 +66,7 @@ See our paper for more details [[1](#reference)].
 If you have trouble doing something with BADS:
 
 - Check out the FAQ on the [BADS wiki](https://github.com/lacerbi/bads/wiki);
-- Contact me at <luigi.acerbi@nyu.edu>, putting 'BADS' in the subject of the email.
+- Contact me at <luigi.acerbi@helsinki.fi>, putting 'BADS' in the subject of the email.
 
 This project is under active development. If you find a bug, or anything that needs correction, please let me know.
 
@@ -74,7 +74,7 @@ This project is under active development. If you find a bug, or anything that ne
 
 BADS is currently available only for MATLAB. A Python version is being planned.
 
-If you are interested in porting BADS to Python or another language (R, [Julia](https://julialang.org/)), please get in touch at <luigi.acerbi@nyu.edu> (putting  'BADS' in the subject of the email); I'd be willing to help.
+If you are interested in porting BADS to Python or another language (R, [Julia](https://julialang.org/)), please get in touch at <luigi.acerbi@helsinki.fi> (putting  'BADS' in the subject of the email); I'd be willing to help.
 However, before contacting me for this reason, please have a good look at the codebase here on GitHub, and at the paper [[1](#reference)]. BADS is a fairly complex piece of software, so be aware that porting it will require considerable effort and programming skills.
 
 ## Reference
@@ -89,7 +89,7 @@ Besides formal citations, you can demonstrate your appreciation for BADS in the 
 
 - *Star* the BADS repository on GitHub;
 - [Follow me on Twitter](https://twitter.com/AcerbiLuigi) for updates about BADS and other projects I am involved with;
-- Tell me about your model-fitting problem and your experience with BADS (positive or negative) at <luigi.acerbi@nyu.edu> (putting  'BADS' in the subject of the email).
+- Tell me about your model-fitting problem and your experience with BADS (positive or negative) at <luigi.acerbi@helsinki.fi> (putting  'BADS' in the subject of the email).
 
 ### License
 
