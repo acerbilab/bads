@@ -139,7 +139,7 @@ for iRun = 1:Nruns
                 
                 gpstruct.x(idx,:) = [];
                 gpstruct.y(idx) = [];
-                if isfield(gpstruct,'s')
+                if isfield(gpstruct,'s') && ~isempty(gpstruct.s)
                     gpstruct.s(idx) = [];                    
                 end
                                 
