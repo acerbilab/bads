@@ -139,6 +139,9 @@ for iRun = 1:Nruns
                 
                 gpstruct.x(idx,:) = [];
                 gpstruct.y(idx) = [];
+                if isfield(gpstruct,'s')
+                    gpstruct.s(idx) = [];                    
+                end
                                 
                 % Recompute optimization function
                 [func,hessfunc,optfunc,OptOptions] = getOptimizer(lb,ub,fixed,gpstruct,optimtoolbox,options);

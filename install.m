@@ -1,6 +1,6 @@
 % MATLAB installation script for BADS
 %
-% Copyright (c) by Luigi Acerbi 2017
+% Copyright (c) by Luigi Acerbi 2017-2022
 
 display('Installing BADS... ');
 

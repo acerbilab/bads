@@ -135,8 +135,8 @@ function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PU
 %   Author (copyright): Luigi Acerbi, 2017-2021
 %   e-mail: luigi.acerbi@{gmail.com,nyu.edu}
 %   URL: http://luigiacerbi.com
-%   Version: 1.0.6
-%   Release date: Jan 8, 2020
+%   Version: 1.0.7
+%   Release date: May 6, 2022
 %   Code repository: https://github.com/lacerbi/bads
 %--------------------------------------------------------------------------
 
@@ -1575,4 +1575,5 @@ end
 % 1.0.2 (May/27/2017) Added support for output functions.
 % 1.0.3 (Jun/05/2017) Fixed bug with fixed variables/output functions.
 % 1.0.4 (Jul/19/2017) Fixed LB/UB starting point issue and minor fixes.
-% 1.0.5 (Feb/13/2018) Updated reference, renamed unwrap.m, added warning identifiers.
+% 1.0.6 (Jan/16/2021) Added support for user-specified (heteroskedastic) noise.
+% 1.0.7 (May/06/2022) Fixed bug with user-specified noise.
