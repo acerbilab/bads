@@ -81,6 +81,21 @@ if ~options.SpecifyTargetNoise && ~isempty(options.NoiseSize) && options.NoiseSi
     error('OPTIONS.NoiseSize, if specified, needs to be a positive scalar for numerical stability.');
 end
 
+% Deal with user-specified target noise
+
+if isempty(options.SpecifyTargetNoise)
+    options.SpecifyTargetNoise = false;
+end
+
+if options.SpecifyTargetNoise && isempty(options.UncertaintyHandling)
+    options.UncertaintyHandling = true;
+end
+
+if options.SpecifyTargetNoise && ... 
+        ~isempty(options.UncertaintyHandling) && ~options.UncertaintyHandling    
+    error('If OPTIONS.SpecifyTargetNoise is ON, OPTIONS.UncertaintyHandling should be ON as well. Leave OPTIONS.UncertaintyHandling empty or set it to ON to avoid this error.');
+end
+
 if options.SpecifyTargetNoise && ...
         ~isempty(options.NoiseSize) && options.NoiseSize(1) > 0
     warning('If OPTIONS.SpecifyTargetNoise is ON, OPTIONS.NoiseSize is ignored. Leave OPTIONS.NoiseSize empty or set it to 0 to silence this warning.');

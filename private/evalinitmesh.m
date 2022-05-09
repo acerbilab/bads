@@ -42,17 +42,23 @@ if isempty(optimState.UncertaintyHandling)
     optimState.funccount = optimState.funccount + 1;    % +1 fcn eval to count
     if abs(yval - yval_bis) > options.TolNoise
         optimState.UncertaintyHandling = 1;
-        if prnt > 0
-            fprintf('Beginning optimization of a STOCHASTIC objective fcn.\n\n');
-        end
     else
         optimState.UncertaintyHandling = 0;
-        if prnt > 0
-            fprintf('Beginning optimization of a DETERMINISTIC objective fcn.\n\n');
-        end
     end
 else
     uncertaintyTest = '';    
+end
+
+if prnt > 0
+    if optimState.UncertaintyHandling        
+        if options.SpecifyTargetNoise
+            fprintf('Beginning optimization of a STOCHASTIC objective fcn (specified noise).\n');
+        else
+            fprintf('Beginning optimization of a STOCHASTIC objective fcn.\n');
+        end
+    else
+        fprintf('Beginning optimization of a DETERMINISTIC objective fcn.\n');
+    end
 end
 
 % Display format depends whether the objective is noisy

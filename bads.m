@@ -1,5 +1,5 @@
 function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PUB,nonbcon,options,varargin)
-%BADS Constrained optimization using Bayesian Adaptive Direct Search (v1.0.6)
+%BADS Constrained optimization using Bayesian Adaptive Direct Search (v1.0.8)
 %   BADS attempts to solve problems of the form:
 %       min F(X)  subject to:  LB <= X <= UB
 %        X                        C(X) <= 0        (optional)
@@ -112,7 +112,6 @@ function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PU
 %   the estimate as the *second output* of FUN. That is [FVAL,SD] = FUN(X)
 %   where FVAL is the observed (noisy) function value at X, and SD is the 
 %   estimated standard deviation of the observation at X. Then set
-%       OPTIONS.UncertaintyHandling = true
 %       OPTIONS.SpecifyTargetNoise = true
 %
 %   See BADS_EXAMPLES for more examples. The most recent version of the 
@@ -132,11 +131,11 @@ function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PU
 % To be used under the terms of the GNU General Public License 
 % (http://www.gnu.org/copyleft/gpl.html).
 %
-%   Author (copyright): Luigi Acerbi, 2017-2021
+%   Author (copyright): Luigi Acerbi, 2017-2022
 %   e-mail: luigi.acerbi@{gmail.com,nyu.edu}
 %   URL: http://luigiacerbi.com
-%   Version: 1.0.7
-%   Release date: May 6, 2022
+%   Version: 1.0.8
+%   Release date: May 9, 2022
 %   Code repository: https://github.com/lacerbi/bads
 %--------------------------------------------------------------------------
 
@@ -147,6 +146,7 @@ function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PU
 %% Start timer
 
 t0 = tic;
+bads_version = '1.0.8';
 
 %% Basic default options
 
@@ -176,6 +176,12 @@ end
 %% If called with one argument which is 'test', run test
 if nargout <= 1 && nargin == 1 && ischar(fun) && strcmpi(fun,'test')
     x = runtest();
+    return;
+end
+
+%% If called with one argument which is 'version', return version
+if nargout <= 1 && nargin == 1 && ischar(fun) && strcmpi(fun,'version')
+    x = bads_version;
     return;
 end
 
@@ -1052,7 +1058,7 @@ while ~isFinished_flag
             if SuccessPoll_flag; string = 'Successful poll'; else string = 'Refine grid'; end
             action = [];
             if refitted_flag
-                if isempty(action); action = 'Train'; else action = [action ', train']; end;
+                if isempty(action); action = 'Train'; else action = [action ', train']; end
                 if gpexitflag < 0; action = [action ' (failed)']; end
             end
             if lastskipped == iter; if isempty(action); action = 'Skip'; else action = [action ', skip']; end; end
@@ -1079,7 +1085,7 @@ while ~isFinished_flag
     
     %----------------------------------------------------------------------
     %% Finalize iteration
-            
+        
     % Scatter plot of iteration
     if strcmpi(options.Plot,'scatter')
         scatterplot(iter,ubest,fval,action,gpstruct,optimState,options);
@@ -1122,29 +1128,28 @@ while ~isFinished_flag
         optimState.iterList.hyp{iter} = gpstruct.hyp;        
     end
     
-    % Re-evaluate all points
-    if DoPollStep_flag && optimState.UncertaintyHandling                        
-        if iter > 1
-            optimState = reevaluateIterList(optimState,gpstruct,options);
-            
-            % Update estimates of incumbent
-            yval = optimState.iterList.yval(iter);
-            fval = optimState.iterList.fval(iter);
-            fsd = optimState.iterList.fsd(iter);
-            fhyp = optimState.iterList.hyp{iter};
+    % Re-evaluate all noisy estimates at the end of iteration
+    if DoPollStep_flag && optimState.UncertaintyHandling && iter > 1
+        optimState = reevaluateIterList(optimState,gpstruct,options);
 
-            % Recompute improvement for all iterations
-            ReImprovementList = EvalImprovement(fval,optimState.iterList.fval,fsd,optimState.iterList.fsd,options.ImprovementQuantile);
-            [ReImprovement,index] = max(ReImprovementList);
+        % Update estimates of incumbent
+        yval = optimState.iterList.yval(iter);
+        fval = optimState.iterList.fval(iter);
+        fsd = optimState.iterList.fsd(iter);
+        fhyp = optimState.iterList.hyp{iter};
 
-            % Check if any point got better
-            if ReImprovement > options.TolFun
-                yval = optimState.iterList.yval(index);
-                fval = optimState.iterList.fval(index);
-                fsd = optimState.iterList.fsd(index);
-                u = optimState.iterList.u(index,:);
-                fhyp = optimState.iterList.hyp{index};
-            end
+        % Recompute improvement for all iterations
+        ReImprovementList = EvalImprovement(fval,optimState.iterList.fval,fsd,optimState.iterList.fsd,options.ImprovementQuantile);
+        [ReImprovement,index] = max(ReImprovementList(2:end)); % Skip first
+        index = index + 1;
+
+        % Check if any point got better
+        if ReImprovement > options.TolFun
+            yval = optimState.iterList.yval(index);
+            fval = optimState.iterList.fval(index);
+            fsd = optimState.iterList.fsd(index);
+            u = optimState.iterList.u(index,:);
+            fhyp = optimState.iterList.hyp{index};
         end
     end
     
@@ -1162,7 +1167,7 @@ while ~isFinished_flag
 
 end
 
-% Re-evaluate all best points (skip first iteration)
+% Re-evaluate all best points for noisy evaluations
 yval_vec = yval;
 if optimState.UncertaintyHandling && iter > 1    
     optimState = reevaluateIterList(optimState,gpstruct,options);
@@ -1170,7 +1175,8 @@ if optimState.UncertaintyHandling && iter > 1
     % Order by lowest probabilistic upper bound and choose best iterate
     SigmaMultiplier = sqrt(2).*erfcinv(2*options.FinalQuantile);    % Using inverted convention
     qbeta = optimState.iterList.fval + SigmaMultiplier*optimState.iterList.fsd;
-    [~,index] = min(qbeta);
+    [~,index] = min(qbeta(2:end)); % Skip first iteration
+    index = index + 1;
 
     % Best iterate
     yval = optimState.iterList.yval(index);
@@ -1179,7 +1185,7 @@ if optimState.UncertaintyHandling && iter > 1
     u = optimState.iterList.u(index,:);
     
     % Re-evaluate estimated function value and SD at final point
-    % (only if FUN is returned)
+    % (only if FVAL is returned)
     if nargout > 1
         if options.NoiseFinalSamples > 0
             [yval_vec,fval,fsd,optimState] = FinalEstimate(u,yval,funwrapper,optimState,gpstruct,options);
@@ -1210,53 +1216,15 @@ if prnt > 1
     end
 end
 
-if nargout > 3
-    output.function = func2str(fun);    
-    if optimState.UncertaintyHandling
-        if options.SpecifyTargetNoise
-            output.targettype = 'stochastic (known noise)';
-        else
-            output.targettype = 'stochastic';
-        end
-    else
-        output.targettype = 'deterministic';
-    end   
-    if all(isinf(LB)) && all(isinf(UB)) && isempty(nonbcon)
-        output.problemtype = 'unconstrained';
-    elseif isempty(nonbcon)
-        output.problemtype = 'boundconstraints';
-    else
-        output.problemtype = 'nonboundconstraints';        
-    end    
-    output.iterations = iter;
-    output.funccount = optimState.funccount;
-    output.meshsize = optimState.meshsize;
-    output.overhead = NaN;
-    output.rngstate = rng;
-    output.algorithm = 'Bayesian adaptive direct search';
+if nargout > 3    
+    totaltime = toc(t0);
+    output = bads_output(fun,optimState,options,LB,UB,nonbcon,iter,x, ...
+        msg,yval_vec,fval,fsd,totaltime,bads_version);
     
-    if ~isempty(optimState.nonbcon)
-        output.maxconstraint = optimState.nonbcon(x);
-    else
-        output.maxconstraint = 0;
-    end
-    output.message = msg;
-    
-    % Observed function value(s) at optimum (possibly multiple samples)
-    output.yval = yval_vec;
-
-    % Return mean and SD of the estimated function value at the optimum
-    output.fval = fval;
-    output.fsd = fsd;
-            
     % Return optimization struct (can be reused in future runs)
     if nargout > 4
         [~,optimState] = funlogger(funwrapper,u,optimState,'done');
-    end
-    
-    % Compute total running time and fractional overhead
-    optimState.totaltime = toc(t0);    
-    output.overhead = optimState.totaltime / optimState.totalfunevaltime - 1;
+    end    
 end
 
 end % Main BADS function
@@ -1577,3 +1545,5 @@ end
 % 1.0.4 (Jul/19/2017) Fixed LB/UB starting point issue and minor fixes.
 % 1.0.6 (Jan/16/2021) Added support for user-specified (heteroskedastic) noise.
 % 1.0.7 (May/06/2022) Fixed bug with user-specified noise.
+% 1.0.8 (May/09/2022) Extra fixes to uncertainty handling and user-specified 
+%                     noise, printing, output version number.
