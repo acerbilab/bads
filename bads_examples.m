@@ -12,7 +12,7 @@
 %  to check that everything is working correctly.
 %
 %  For any question, check out the FAQ: 
-%  https://github.com/lacerbi/bads/wiki
+%  https://github.com/acerbilab/bads/wiki
 %
 %  See also BADS.
 
@@ -204,7 +204,7 @@ pause;
 [x,fval,exitflag,output] = bads(periodicfun,x0,lb,ub,plb,pub,[],options);
 x
 fval
-display('The true global minimum is at X = [1,1,±2,±1], where FVAL = 0.');
+display('The true global minimum is at X = [1,1,Â±2,Â±1], where FVAL = 0.');
 
 
 %% Example 6: Extended usage
@@ -262,4 +262,4 @@ display('EXITFLAG of 0 means that the maximum number of function evaluations has
 fprintf('\n');
 display('For this optimization we used the following OPTIONS:')
 options
-display('Type ''help bads'' for additional documentation on BADS, or consult the <a href="https://github.com/lacerbi/bads">Github page</a> or <a href="https://github.com/lacerbi/bads/wiki">online FAQ</a>.');
+display('Type ''help bads'' for additional documentation on BADS, or consult the <a href="https://github.com/acerbilab/bads">Github page</a> or <a href="https://github.com/acerbilab/bads/wiki">online FAQ</a>.');
