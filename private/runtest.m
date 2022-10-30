@@ -88,6 +88,7 @@ PLB = -8*ones(1,nvars);                 % Plausible lower bound
 PUB = 12*ones(1,nvars);                 % Plausible upper bound
 
 options = bads('defaults');             % Default options
+options.Debug = true;
 
 if henoise_flag
     options.SpecifyTargetNoise = true;

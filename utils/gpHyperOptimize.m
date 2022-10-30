@@ -104,7 +104,6 @@ for iRun = 1:Nruns
             break;
         catch optexc
             
-            
             % Try removing closest pair of points
             if iTry > removeafter % if iTry > 2
                 

@@ -63,6 +63,9 @@ switch (lower(method))
             
         catch
             % Posterior update failed, point was not added
+            if options.Debug
+                fprintf('Rank-1 GP posterior update failed.\n');
+            end
         end
         
         return;
@@ -457,6 +460,9 @@ catch
     % Posterior update failed
     gpstruct.post = [];
     exitflag = -2;
+    if options.Debug
+        fprintf('GP posterior computation failed.\n');
+    end
 end
 
 % gpstruct.hyp.cov(:)'
@@ -516,6 +522,10 @@ end
 
 [hyp,exitflag] = gpHyperOptimize(hyp0,gpopt,options.OptimToolbox,optoptions,options.NoiseNudge,options.RemovePointsAfterTries);     
 hypw = 1;
+
+%if exitflag < 0 && options.Debug
+%    fprintf('GP hyperparameter optimization failed.\n');    
+%end
 
 % If using multiple samples, do SVGD from neighborhood of the MAP
 if Nsamples > 1

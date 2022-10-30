@@ -1,4 +1,4 @@
-function [fval,optimState] = funlogger(fun,u,optimState,state,varargin)
+function [fval,optimState,fsd] = funlogger(fun,u,optimState,state,varargin)
 %FUNLOGGER Call objective function and do some bookkeeping.
 %   [~,OPTIMSTATE] = FUNLOGGER(FUN,U,OPTIMSTATE,'init') starts logging
 %   function FUN with starting point U and optimization struct OPTIMSTATE.
@@ -24,6 +24,8 @@ function [fval,optimState] = funlogger(fun,u,optimState,state,varargin)
 %   Luigi Acerbi 2017
 
 fval = [];
+fsd = [];
+
 switch lower(state)
     case 'init' % Start new function logging session
     
