@@ -93,4 +93,4 @@ Besides formal citations, you can demonstrate your appreciation for BADS in the 
 
 ### License
 
-BADS is released under the terms of the [GNU General Public License v3.0](https://github.com/lacerbi/bads/blob/master/LICENSE.txt).
+BADS is released under the terms of the [GNU General Public License v3.0](https://github.com/acerbilab/bads/blob/master/LICENSE.txt).
