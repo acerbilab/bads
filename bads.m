@@ -116,8 +116,8 @@ function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PU
 %
 %   See BADS_EXAMPLES for more examples. The most recent version of the 
 %   algorithm and additional documentation can be found here:
-%   https://github.com/lacerbi/bads
-%   Also, check out the FAQ: https://github.com/lacerbi/bads/wiki
+%   https://github.com/acerbilab/bads
+%   Also, check out the FAQ: https://github.com/acerbilab/bads/wiki
 %
 %   Reference: Acerbi, L. & Ma, W. J. (2017). "Practical Bayesian 
 %   Optimization for Model Fitting with Bayesian Adaptive Direct Search". 
@@ -136,7 +136,7 @@ function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PU
 %   URL: http://luigiacerbi.com
 %   Version: 1.0.8
 %   Release date: May 9, 2022
-%   Code repository: https://github.com/lacerbi/bads
+%   Code repository: https://github.com/acerbilab/bads
 %--------------------------------------------------------------------------
 
 % Old syntax X = BADS(FUN,X0,LB,UB,PLB,PUB,OPTIONS) should work fine but 
@@ -1207,9 +1207,9 @@ if prnt > 1
     fprintf('\n%s\n', msg);    
     if optimState.UncertaintyHandling
         if numel(yval_vec) == 1
-            fprintf('Observed function value at minimum: %g (1 sample). Estimated: %g ± %g (GP mean ± SEM).\n\n', yval_vec(1), fval, fsd);
+            fprintf('Observed function value at minimum: %g (1 sample). Estimated: %g Â± %g (GP mean Â± SEM).\n\n', yval_vec(1), fval, fsd);
         else
-            fprintf('Estimated function value at minimum: %g ± %g (mean ± SEM from %d samples).\n\n', fval, fsd, numel(yval_vec));            
+            fprintf('Estimated function value at minimum: %g Â± %g (mean Â± SEM from %d samples).\n\n', fval, fsd, numel(yval_vec));            
         end
     else
         fprintf('Function value at minimum: %g.\n\n', fval);
