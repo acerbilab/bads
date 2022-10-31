@@ -3,7 +3,7 @@
 %  Example 1: Basic usage
 %  Example 2: Non-bound constraints
 %  Example 3: Noisy objective function
-%  Example 4: Extra noisy objective function
+%  Example 4: Noisy objective with user-provided noise estimates
 %  Example 5: Periodic function
 %  Example 6: Extended usage
 %
@@ -16,17 +16,24 @@
 %
 %  See also BADS.
 
-% Luigi Acerbi 2017
+% Luigi Acerbi 2017-2022
 
-display('Running a number of examples usage for Bayesian Adaptive Direct Search (BADS).');
-display('Open ''bads_examples.m'' to see additional comments and instructions.');
+disp('Running a number of examples usage for Bayesian Adaptive Direct Search (BADS).');
+disp('Open ''bads_examples.m'' to see additional comments and instructions.');
 
 
 %% Example 1: Basic usage
 
 % Simple usage of BADS on Rosenbrock's banana function in 2D
 % (see https://en.wikipedia.org/wiki/Rosenbrock_function).
-% 
+
+% Screen display
+fprintf('\n');
+disp('*** Example 1: Basic usage');
+disp('  Simple usage of BADS on <a href="https://en.wikipedia.org/wiki/Rosenbrock_function">Rosenbrock''s banana function</a> in 2D.');
+disp('  Press any key to continue.'); fprintf('\n');
+pause;
+
 % We specify wide hard bounds and tighter plausible bounds that (hopefully) 
 % contain the solution. Plausible bounds represent your best guess at 
 % bounding the region where the solution might lie.
@@ -37,17 +44,11 @@ ub = [20 20];               % Upper bounds
 plb = [-5 -5];              % Plausible lower bounds
 pub = [5 5];                % Plausible upper bounds
 
-% Screen display
-fprintf('\n');
-display('*** Example 1: Basic usage');
-display('  Simple usage of BADS on <a href="https://en.wikipedia.org/wiki/Rosenbrock_function">Rosenbrock''s banana function</a> in 2D.');
-display('  Press any key to continue.'); fprintf('\n');
-pause;
 
 % Run BADS, which returns the minimum X and its value FVAL.
 [x,fval] = bads(@rosenbrocks,x0,lb,ub,plb,pub)
 
-display('The true global minimum is at X = [1,1], where FVAL = 0.');
+disp('The true global minimum is at X = [1,1], where FVAL = 0.');
 
 % Note that BADS by default does not aim for extreme numerical precision 
 % (e.g., beyond the 2nd or 3rd decimal place), since in realistic 
@@ -55,6 +56,13 @@ display('The true global minimum is at X = [1,1], where FVAL = 0.');
 
 
 %% Example 2: Non-bound constraints
+
+fprintf('\n');
+disp('*** Example 2: Non-bound constraints');
+disp('  As before, but we force the input to stay in a circle with unit radius.');
+disp('  BADS will complain because the plausible bounds are not specified explicitly.');
+disp('  Press any key to continue.'); fprintf('\n');
+pause;
 
 % We test BADS by forcing the solution to be within a circle with radius 1.
 % Since we know the optimization region, we set tight hard bounds around it
@@ -75,14 +83,6 @@ nonbcon = @(x) sum(x.^2,2) > 1;
 % nonbcon = @(x) (x(:,1).^2 + x(:,2).^2) > 1;   % Correct
 % nonbcon = @(x) (x(1).^2 + x(2).^2) > 1;       % Wrong! not matrix input
 
-% Screen display
-fprintf('\n');
-display('*** Example 2: Non-bound constraints');
-display('  As before, but we force the input to stay in a circle with unit radius.');
-display('  BADS will complain because the plausible bounds are not specified explicitly.');
-display('  Press any key to continue.'); fprintf('\n');
-pause;
-
 % Run BADS with both bound and non-bound constraints
 [x,fval] = bads(@rosenbrocks,x0,lb,ub,[],[],nonbcon)
 
@@ -93,7 +93,7 @@ pause;
 % plb = lb; pub = ub;
 % [x,fval] = bads(@rosenbrocks,x0,lb,ub,plb,pub,nonbcon)
 
-display('The true global minimum under these constraints is at X = [0.786,0.618], where FVAL = 0.046.');
+disp('The true global minimum under these constraints is at X = [0.786,0.618], where FVAL = 0.046.');
 
 
 %% Example 3: Noisy objective function
@@ -101,33 +101,59 @@ display('The true global minimum under these constraints is at X = [0.786,0.618]
 % We test BADS on a noisy function. For the purpose of this test, we
 % manually add unit Gaussian noise to the 'sphere' (quadratic) function.
 
+fprintf('\n');
+disp('*** Example 3: Noisy objective function');
+disp('  We test BADS on a noisy quadratic function with unit Gaussian noise.');
+disp('  Press any key to continue.'); fprintf('\n');
+pause;
+
 % Define the noisy objective as a function handle
 noisyfun = @(x) sum(x.^2,2) + randn(size(x,1),1);
 
-x0 = [-3 -3];       % For a change, we start farther away from the solution
+% For a change, we start farther away from the solution
+x0 = [-3 -3];
+
 % This time to help the search we set tighter bounds
 lb = [-5 -5];   ub = [5 5];
 plb = [-2 -2];  pub = [2 2];
 
-% Screen display
-fprintf('\n');
-display('*** Example 3: Noisy objective function');
-display('  We test BADS on a noisy quadratic function with unit Gaussian noise.');
-display('  Press any key to continue.'); fprintf('\n');
-pause;
+% We set several OPTIONS for the optimization (start with defaults)
+options = bads('defaults');
+
+% For this optimization, we explicitly tell BADS that the objective is
+% noisy (it is not necessary, but it is a good habit); and also specify a 
+% rough estimate for the value of the standard deviation of the noise in a 
+% neighborhood of the solution.
+options.UncertaintyHandling = true;
+options.NoiseSize = 1;  % Optional, leave empty if unknown
+
+% We also limit the number of function evaluations, knowing that this is a 
+% simple example. Generally, BADS will tend to run for longer on noisy 
+% problems to better explore the noisy landscape.
+options.MaxFunEvals = 300;
+
+% Finally, we tell BADS to re-evaluate the target at the returned solution 
+% with 100 samples (10 by default, but since our function is inexpensive we 
+% can use more evaluations). Note that this number counts towards the budget 
+% of function evaluations.
+options.NoiseFinalSamples = 100;
 
 % Run BADS on the noisy function
-[x,fval,exitflag,output] = bads(noisyfun,x0,lb,ub,plb,pub);
+[x,fval,exitflag,output] = bads(noisyfun,x0,lb,ub,plb,pub,[],options);
 x
 fval
-display(['The true, noiseless value of the function at X is ' num2str(sum(x.^2,2)) '.']);
-display('The true global minimum is at X = [0,0], where FVAL = 0.');
+disp(['The true, noiseless value of the function at X is ' num2str(sum(x.^2,2)) '.']);
+disp('The true global minimum is at X = [0,0], where FVAL = 0.');
 
 % FVAL in this case is an *estimate* of the function at X, obtained by
-% averaging ten function evaluations. These values can be found in the
-% OUTPUT structure, together with additional information about the optimization.
+% averaging OPTIONS.NoiseFinalSamples function evaluations (default 10). 
+% These values can be found in the OUTPUT structure (OUTPUT.yval), together 
+% with additional information about the optimization.
 
-display('The returned OUTPUT structure is:');
+disp('  Press any key to continue.'); fprintf('\n');
+pause;
+
+disp('The returned OUTPUT structure is:');
 output
 
 % Note that the fractional overhead of BADS reported in OUTPUT is astronomical.
@@ -137,79 +163,81 @@ output
 % (e.g., more than 0.1 s per function evaluation), and the fractional 
 % overhead should be less than 1.
 
+% For more information on optimizing noisy objective functions, see the
+% BADS wiki: https://github.com/acerbilab/bads/wiki#noisy-objective-function
 
-%% Example 4: Extra noisy objective function
 
-% We test BADS on a particularly noisy function and look at some options.
+%% Example 4: Noisy objective with user-provided noise estimates
 
-% Define noisy objective with substantial input-dependent noise
-noisyfun = @(x) sum(x.^2,2) + (3 + 0.1*sqrt(sum(x.^2,2))).*randn(size(x,1),1);
+% Sometimes you may be able to estimate the noise associated with *each* 
+% function evaluation, for example via bootstrap or other estimation methods.
+% If you can do that, it is highly recommended you do so and tell BADS.
 
-% For this optimization, we explicitly tell BADS that the objective is
-% noisy (it is not necessary, but it is a good habit); and also specify a 
-% rough estimate for the value of the noise in a neighborhood of the solution.
-% Finally, we tell BADS to use more samples to estimate FVAL at the end.
+fprintf('\n');
+disp('*** Example 4: Noisy function with user-provided noise estimates');
+disp('  We test BADS on a noisy function for which we can estimate the noise.');
+disp('  Press any key to continue.'); fprintf('\n');
+pause;
 
-options = [];                       % Reset the OPTIONS struct
-options.UncertaintyHandling = 1;    % Tell BADS that the objective is noisy
-options.NoiseSize           = 5;    % Estimate of noise
-options.NoiseFinalSamples   = 100;  % # samples to estimate FVAL at the end 
-                                    % (default would be 10)
+% First, we inform BADS that we are specifying the target noise.
+options = bads('defaults');         % Get default options
+options.UncertaintyHandling = true; % Tell BADS that the objective is noisy
+options.SpecifyTargetNoise = true;  % We are also specifying the noise
+options.NoiseFinalSamples   = 100;  % More samples at the end 
+
+% The noise standard deviation is returned as *second output* of the target
+% function (check out the function "hetsphere.m").
+
 x0 = [-3 -3];
 lb = [-5 -5];   ub = [5 5];
 plb = [-2 -2];  pub = [2 2];
 
-% Screen display
-fprintf('\n');
-display('*** Example 4: Extra noisy function');
-display('  We test BADS on a particularly noisy function.');
-display('  Press any key to continue.'); fprintf('\n');
-pause;
-
 % Run BADS on the noisy function
-[x,fval,exitflag,output] = bads(noisyfun,x0,lb,ub,plb,pub,[],options);
-x
-fval
-display(['The true, noiseless value of the function at X is ' num2str(sum(x.^2,2)) '.']);
-display('The true global minimum is at X = [1,1], where FVAL = 0.');
-display('Due to the elevated level of noise, we do not necessarily expect high precision in the solution.');
+[x,fval] = bads(@hetsphere,x0,lb,ub,plb,pub,[],options)
+
+disp(['The true, noiseless value of the function at X is ' num2str(sum(x.^2,2)) '.']);
+disp('The true global minimum is at X = [0,0], where FVAL = 0.');
+disp('Due to the elevated level of noise, we do not necessarily expect high precision in the solution.');
 
 
 %% Example 5: Objective function with periodic dimensions
 
 % We test BADS on a function with a subset of periodic dimensions.
 
+fprintf('\n');
+disp('*** Example 5: Objective function with periodic dimensions');
+disp('  We test BADS on a function with some periodic inputs.');
+disp('  Press any key to continue.'); fprintf('\n');
+pause;
+
 % This function is periodic along the third and fourth dimension, with
 % periods respectively 4 and 2.
 periodicfun = @(x) rosenbrocks(x(:,1:2)) + cos(x(:,3)*pi/2) + cos(x(:,4)*pi) + 2;
 
 x0 = [-3 -3 -1 -1];
-% We specify the periodic bounds via hard bounds
+% We specify the periodic bounds via the hard bounds
 lb = [-10 -5 -2 -1];
 ub = [5 10 2 1];
 
 plb = [-2 -2 -2 -1];
 pub = [2 2 2 1];
 
-options = [];                       % Reset the OPTIONS struct
+options = bads('defaults');         % Get default options
 options.PeriodicVars = [3 4];       % The 3rd and 4th variables are periodic
 
-% Screen display
-fprintf('\n');
-display('*** Example 5: Objective function with periodic dimensions');
-display('  We test BADS on a function with some periodic inputs.');
-display('  Press any key to continue.'); fprintf('\n');
-pause;
-
-[x,fval,exitflag,output] = bads(periodicfun,x0,lb,ub,plb,pub,[],options);
-x
-fval
-display('The true global minimum is at X = [1,1,±2,±1], where FVAL = 0.');
+[x,fval] = bads(periodicfun,x0,lb,ub,plb,pub,[],options)
+disp('The true global minimum is at X = [1,1,±2,±1], where FVAL = 0.');
 
 
 %% Example 6: Extended usage
 
 % Extended usage of BADS that shows some additional options.
+
+fprintf('\n');
+disp('*** Example 6: Extended usage');
+disp('  Extended usage of BADS with additional options and no detailed display.');
+disp('  Press any key to continue.'); fprintf('\n');
+pause;
 
 % Function handle for function with multiple input arguments (e.g., here
 % we add a translation of the input; but more in general you could be 
@@ -217,7 +245,7 @@ display('The true global minimum is at X = [1,1,±2,±1], where FVAL = 0.');
 fun = @(x,mu) rosenbrocks(bsxfun(@plus, x, mu)); 
 
 % This will translate the Rosenbrock fcn such that the global minimum is at zero
-mu = [1 1 1 1];
+mu = ones(1,4);
 
 % We now set bounds using also fixed variables
 % (2nd and 4th variable are fixed by setting all bounds and X0 equal)
@@ -235,18 +263,13 @@ x0 = plb + (pub-plb).*rand(1,numel(plb));
 
 options = bads('defaults');             % Get a default OPTIONS struct
 options.MaxFunEvals         = 50;       % Very low budget of function evaluations
-options.Display             = 'final';   % Print only basic output ('off' turns off)
-options.UncertaintyHandling = 0;        % We tell BADS that the objective is deterministic
+options.Display             = 'final';  % Print only basic output ('off' turns off)
+options.UncertaintyHandling = false;    % The objective is deterministic
 
-% Custom output function (return FALSE to continue, TRUE to stop optimization)
-options.OutputFcn           = @(x,optimState,state) ~isfinite(fprintf('%s %d... ', state, optimState.iter));
-
-% Screen display
-fprintf('\n');
-display('*** Example 6: Extended usage');
-display('  Extended usage of BADS with additional options and no detailed display.');
-display('  Press any key to continue.'); fprintf('\n');
-pause;
+% Custom output function, this one just ptints the iteration number 
+% (return FALSE to continue, TRUE to stop optimization)
+options.OutputFcn = @(x,optimState,state) ...
+    ~isfinite(fprintf('%s %d... ', state, optimState.iter));
 
 % Run BADS, passing MU as additional (fixed) input argument for FUN
 [x,fval,exitflag,output] = bads(fun,x0,lb,ub,plb,pub,[],options,mu);
@@ -256,10 +279,12 @@ pause;
 
 x
 fval
-display('The true global minimum is at X = [0,0,0,0], where FVAL = 0.');
+disp('The true global minimum is at X = [0,0,0,0], where FVAL = 0.');
+
 exitflag
-display('EXITFLAG of 0 means that the maximum number of function evaluations has been reached.');
+disp('EXITFLAG of 0 means that the maximum number of function evaluations has been reached.');
 fprintf('\n');
-display('For this optimization we used the following OPTIONS:')
+
+disp('For this optimization we used the following OPTIONS:')
 options
-display('Type ''help bads'' for additional documentation on BADS, or consult the <a href="https://github.com/acerbilab/bads">Github page</a> or <a href="https://github.com/acerbilab/bads/wiki">online FAQ</a>.');
+disp('Type ''help bads'' for additional documentation on BADS, or consult the <a href="https://github.com/acerbilab/bads">Github page</a> or <a href="https://github.com/acerbilab/bads/wiki">online FAQ</a>.');
