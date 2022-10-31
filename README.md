@@ -1,6 +1,6 @@
 # Bayesian Adaptive Direct Search (BADS) - v1.1.0
 
-**News:** 
+#### News 
 - 31/Oct/22: BADS 1.1.0 released! Added full support for user-specified noise (e.g., for heteroskedastic targets) and several fixes.
 - If you are interested in Bayesian model fitting, check out [Variational Bayesian Monte Carlo (VBMC)](https://github.com/acerbilab/vbmc), a simple and user-friendly toolbox for Bayesian posterior and model inference that we published at NeurIPS (2018, 2020).
 
@@ -15,7 +15,10 @@ BADS is recommended when no gradient information is available, and the objective
 
 BADS requires no specific tuning and runs off-the-shelf like other built-in MATLAB optimizers such as `fminsearch`.
 
-If you are interested in estimating posterior distributions (i.e., uncertainty and error bars) over parameters, and not just point estimates, you might want to check out [Variational Bayesian Monte Carlo](https://github.com/acerbilab/vbmc), a toolbox for Bayesian posterior and model inference which can be used in synergy with BADS.
+#### Notes
+
+- If you are interested in estimating posterior distributions (i.e., uncertainty and error bars) over parameters, and not just point estimates, you might want to check out [Variational Bayesian Monte Carlo](https://github.com/acerbilab/vbmc), a toolbox for Bayesian posterior and model inference which can be used in synergy with BADS.
+- BADS is currently available only for MATLAB. A Python port, PyBADS, will be released soon (end of 2022).
 
 ## Installation
 
@@ -56,7 +59,7 @@ BADS follows a [mesh adaptive direct search](http://epubs.siam.org/doi/abs/10.11
 
 **Fig 1: BADS procedure** ![BADS procedure](https://github.com/acerbilab/bads/blob/master/docs/bads-cartoon.png "Fig 1: BADS procedure")
 
-See [here](https://github.com/acerbilab/optimviz) for a visualization of several optimizers at work, including BADS.
+See [here](https://github.com/lacerbi/optimviz) for a visualization of several optimizers at work, including BADS.
 
 See our paper for more details [[1](#reference)].
 
@@ -68,10 +71,6 @@ If you have trouble doing something with BADS:
 - Contact me at <luigi.acerbi@helsinki.fi>, putting 'BADS' in the subject of the email.
 
 This project is under active development. If you find a bug, or anything that needs correction, please let me know.
-
-## BADS for other programming languages
-
-BADS is currently available for MATLAB. A Python port, PyBADS, will be released soon (end of 2022).
 
 ## Reference
 
