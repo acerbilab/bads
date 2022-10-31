@@ -135,7 +135,7 @@ function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PU
 %   e-mail: luigi.acerbi@helsinki.fi
 %   URL: http://luigiacerbi.com
 %   Version: 1.1.1
-%   Release date: Nov 2, 2022
+%   Release date: Oct 31, 2022
 %   Code repository: https://github.com/acerbilab/bads
 %--------------------------------------------------------------------------
 
@@ -1507,5 +1507,4 @@ end
 % 1.0.7 (May/06/2022) Fixed bug with user-specified noise.
 % 1.0.8 (May/09/2022) Extra fixes to uncertainty handling and user-specified 
 %                     noise, printing, output version number.
-% 1.1.0 (Oct/31/2022) Full support for user-specified (heteroskedastic) noise.
-% 1.1.1 (Nov/02/2022) Minor tweaks.
+% 1.1.1 (Oct/31/2022) Full support for user-specified (heteroskedastic) noise.
