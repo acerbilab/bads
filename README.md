@@ -1,7 +1,7 @@
 # Bayesian Adaptive Direct Search (BADS) - v1.0.8
 
 **News:** 
-- If you are interested in Bayesian model fitting, check out [Variational Bayesian Monte Carlo (VBMC)](https://github.com/lacerbi/vbmc), a simple and user-friendly toolbox for Bayesian posterior and model inference that we published at NeurIPS (2018, 2020).
+- If you are interested in Bayesian model fitting, check out [Variational Bayesian Monte Carlo (VBMC)](https://github.com/acerbilab/vbmc), a simple and user-friendly toolbox for Bayesian posterior and model inference that we published at NeurIPS (2018, 2020).
 - The BADS paper [[1](#reference)] has been accepted for a poster presentation at [NeurIPS 2017](https://papers.nips.cc/paper/6780-practical-bayesian-optimization-for-model-fitting-with-bayesian-adaptive-direct-search)! (20.9% acceptance rate this year, for a total of 3240 submissions)
 - BADS has also been presented at the NeurIPS workshop on Bayesian optimization for science and engineering, [BayesOpt 2017](https://bayesopt.github.io/).
 
@@ -16,11 +16,11 @@ BADS is recommended when no gradient information is available, and the objective
 
 BADS requires no specific tuning and runs off-the-shelf like other built-in MATLAB optimizers such as `fminsearch`.
 
-If you are interested in estimating posterior distributions (i.e., uncertainty and error bars) over parameters, and not just point estimates, you might want to check out [Variational Bayesian Monte Carlo](https://github.com/lacerbi/vbmc), a toolbox for Bayesian posterior and model inference which can be used in synergy with BADS.
+If you are interested in estimating posterior distributions (i.e., uncertainty and error bars) over parameters, and not just point estimates, you might want to check out [Variational Bayesian Monte Carlo](https://github.com/acerbilab/vbmc), a toolbox for Bayesian posterior and model inference which can be used in synergy with BADS.
 
 ## Installation
 
-[**Download the latest version of BADS as a ZIP file**](https://github.com/lacerbi/bads/archive/master.zip).
+[**Download the latest version of BADS as a ZIP file**](https://github.com/acerbilab/bads/archive/master.zip).
 - To install BADS, clone or unpack the zipped repository where you want it and run the script `install.m`.
    - This will add the BADS base folder to the MATLAB search path.
 - To see if everything works, run `bads('test')`.
@@ -42,11 +42,11 @@ The output parameters are:
 - `X`, the found optimum.
 - `FVAL`, the (estimated) function value at the optimum.
 
-For more usage examples, see [**bads_examples.m**](https://github.com/lacerbi/bads/blob/master/bads_examples.m). You can also type `help bads` to display the documentation.
+For more usage examples, see [**bads_examples.m**](https://github.com/acerbilab/bads/blob/master/bads_examples.m). You can also type `help bads` to display the documentation.
 
-For practical recommendations, such as how to set `LB` and `UB`, and any other question, check out the FAQ on the [BADS wiki](https://github.com/lacerbi/bads/wiki).
+For practical recommendations, such as how to set `LB` and `UB`, and any other question, check out the FAQ on the [BADS wiki](https://github.com/acerbilab/bads/wiki).
 
-*Note*: BADS is a *semi-local* optimization algorithm, in that it can escape local minima better than many other methods — but it can still get stuck. The best performance for BADS is obtained by running the algorithm multiple times from distinct starting points (see [here](https://github.com/lacerbi/bads/wiki#how-do-i-choose-the-starting-point-x0)).
+*Note*: BADS is a *semi-local* optimization algorithm, in that it can escape local minima better than many other methods — but it can still get stuck. The best performance for BADS is obtained by running the algorithm multiple times from distinct starting points (see [here](https://github.com/acerbilab/bads/wiki#how-do-i-choose-the-starting-point-x0)).
 
 ## How does it work
 
@@ -55,9 +55,9 @@ BADS follows a [mesh adaptive direct search](http://epubs.siam.org/doi/abs/10.11
 - In the **poll** stage, points are evaluated on a mesh by taking steps in one direction at a time, until an improvement is found or all directions have been tried. The step size is doubled in case of success, halved otherwise. 
 - In the **search** stage, a [Gaussian process](https://en.wikipedia.org/wiki/Gaussian_process) (GP) is fit to a (local) subset of the points evaluated so far. Then, we iteratively choose points to evaluate according to a *lower confidence bound* strategy that trades off between exploration of uncertain regions (high GP uncertainty) and exploitation of promising solutions (low GP mean).
 
-**Fig 1: BADS procedure** ![BADS procedure](https://github.com/lacerbi/bads/blob/master/docs/bads-cartoon.png "Fig 1: BADS procedure")
+**Fig 1: BADS procedure** ![BADS procedure](https://github.com/acerbilab/bads/blob/master/docs/bads-cartoon.png "Fig 1: BADS procedure")
 
-See [here](https://github.com/lacerbi/optimviz) for a visualization of several optimizers at work, including BADS.
+See [here](https://github.com/acerbilab/optimviz) for a visualization of several optimizers at work, including BADS.
 
 See our paper for more details [[1](#reference)].
 
@@ -65,7 +65,7 @@ See our paper for more details [[1](#reference)].
 
 If you have trouble doing something with BADS:
 
-- Check out the FAQ on the [BADS wiki](https://github.com/lacerbi/bads/wiki);
+- Check out the FAQ on the [BADS wiki](https://github.com/acerbilab/bads/wiki);
 - Contact me at <luigi.acerbi@helsinki.fi>, putting 'BADS' in the subject of the email.
 
 This project is under active development. If you find a bug, or anything that needs correction, please let me know.
@@ -93,4 +93,4 @@ Besides formal citations, you can demonstrate your appreciation for BADS in the 
 
 ### License
 
-BADS is released under the terms of the [GNU General Public License v3.0](https://github.com/lacerbi/bads/blob/master/LICENSE.txt).
+BADS is released under the terms of the [GNU General Public License v3.0](https://github.com/acerbilab/bads/blob/master/LICENSE.txt).

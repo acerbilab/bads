@@ -11,7 +11,7 @@ You can also look up the 'bads_examples.m' script, for many extensively commente
 
 For any other question, clarification, or troubleshooting, check out the BADS online FAQ:
 
-https://github.com/lacerbi/bads/wiki
+https://github.com/acerbilab/bads/wiki
 
 ==============================================================================================
 

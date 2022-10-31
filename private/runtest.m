@@ -48,10 +48,10 @@ fprintf('=======================================================================
 fprintf('\n');
 
 if failed == 0
-    display('BADS is working correctly. See bads_examples.m for usage examples; check out the <a href="https://github.com/lacerbi/bads">BADS website</a>;'); 
-    display('consult the <a href="https://github.com/lacerbi/bads/wiki">online FAQ</a>; or digit ''help bads'' for more information. Enjoy!');
+    display('BADS is working correctly. See bads_examples.m for usage examples; check out the <a href="https://github.com/acerbilab/bads">BADS website</a>;'); 
+    display('consult the <a href="https://github.com/acerbilab/bads/wiki">online FAQ</a>; or digit ''help bads'' for more information. Enjoy!');
 else
-    display('BADS is not working correctly. Please check the <a href="https://github.com/lacerbi/bads/wiki">online FAQ</a> for more information.');
+    display('BADS is not working correctly. Please check the <a href="https://github.com/acerbilab/bads/wiki">online FAQ</a> for more information.');
 end
     
     
