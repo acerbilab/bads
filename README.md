@@ -1,7 +1,7 @@
-# Bayesian Adaptive Direct Search (BADS) - v1.1.0
+# Bayesian Adaptive Direct Search (BADS) - v1.1.1
 
 #### News 
-- 31/Oct/22: BADS 1.1.0 released! Added full support for user-specified noise (e.g., for heteroskedastic targets) and several fixes.
+- 31/Oct/22: BADS 1.1.1 released! Added full support for user-specified noise (e.g., for heteroskedastic targets) and several fixes.
 - If you are interested in Bayesian model fitting, check out [Variational Bayesian Monte Carlo (VBMC)](https://github.com/acerbilab/vbmc), a simple and user-friendly toolbox for Bayesian posterior and model inference that we published at NeurIPS (2018, 2020).
 
 ## What is it?

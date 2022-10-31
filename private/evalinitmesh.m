@@ -89,7 +89,7 @@ if options.MaxFunEvals == 1
     return;
 end
 
-% If dealing with a noisy function, use a large initial mesh
+% If dealing with a noisy function, use a larger initial mesh
 if optimState.UncertaintyHandling
     options.Ninit = min(max(20,options.Ninit),options.MaxFunEvals);
 end
