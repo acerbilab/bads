@@ -1,5 +1,5 @@
 function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PUB,nonbcon,options,varargin)
-%BADS Constrained optimization using Bayesian Adaptive Direct Search (v1.1.0)
+%BADS Constrained optimization using Bayesian Adaptive Direct Search (v1.1.1)
 %   BADS attempts to solve problems of the form:
 %       min F(X)  subject to:  LB <= X <= UB
 %        X                        C(X) <= 0        (optional)
@@ -134,7 +134,7 @@ function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PU
 %   Author (copyright): Luigi Acerbi, 2017-2022
 %   e-mail: luigi.acerbi@helsinki.fi
 %   URL: http://luigiacerbi.com
-%   Version: 1.1.0
+%   Version: 1.1.1
 %   Release date: Nov 2, 2022
 %   Code repository: https://github.com/acerbilab/bads
 %--------------------------------------------------------------------------
@@ -142,7 +142,7 @@ function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PU
 %% Start timer
 
 t0 = tic;
-bads_version = '1.1.0';
+bads_version = '1.1.1';
 
 %% Basic default options
 
@@ -195,7 +195,7 @@ defopts.TolStallIters           = '4 + floor(nvars/2)   % Max iterations with no
 defopts.TolNoise                = 'sqrt(eps)*options.TolFun  % Min variability for a fcn to be considered noisy';
 
 % Initialization
-defopts.Ninit                   = 'nvars                % Number of initial objective fcn evaluations';
+defopts.Ninit                   = '10 + nvars           % Number of initial objective fcn evaluations';
 defopts.InitFcn                 = '@initSobol           % Initialization function';
 % defoptions.InitFcn            = '@initLHS';
 defopts.Restarts                = '0                    % Number of restart attempts';
@@ -1507,4 +1507,5 @@ end
 % 1.0.7 (May/06/2022) Fixed bug with user-specified noise.
 % 1.0.8 (May/09/2022) Extra fixes to uncertainty handling and user-specified 
 %                     noise, printing, output version number.
-% 1.1.0 (Nov/02/2022) Full support for user-specified (heteroskedastic) noise.
+% 1.1.0 (Oct/31/2022) Full support for user-specified (heteroskedastic) noise.
+% 1.1.1 (Nov/02/2022) Minor tweaks.
