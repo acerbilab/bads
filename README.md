@@ -1,13 +1,12 @@
-# Bayesian Adaptive Direct Search (BADS) - v1.0.8
+# Bayesian Adaptive Direct Search (BADS) - v1.1.0
 
 **News:** 
+- 31/Oct/22: BADS 1.1.0 released! Added full support for user-specified noise (e.g., for heteroskedastic targets) and several fixes.
 - If you are interested in Bayesian model fitting, check out [Variational Bayesian Monte Carlo (VBMC)](https://github.com/acerbilab/vbmc), a simple and user-friendly toolbox for Bayesian posterior and model inference that we published at NeurIPS (2018, 2020).
-- The BADS paper [[1](#reference)] has been accepted for a poster presentation at [NeurIPS 2017](https://papers.nips.cc/paper/6780-practical-bayesian-optimization-for-model-fitting-with-bayesian-adaptive-direct-search)! (20.9% acceptance rate this year, for a total of 3240 submissions)
-- BADS has also been presented at the NeurIPS workshop on Bayesian optimization for science and engineering, [BayesOpt 2017](https://bayesopt.github.io/).
 
-## What is it
+## What is it?
 
-BADS is a novel, fast Bayesian optimization algorithm designed to solve difficult optimization problems, in particular related to fitting computational models (e.g., via [maximum likelihood estimation](https://en.wikipedia.org/wiki/Maximum_likelihood_estimation)).
+BADS is a fast hybrid Bayesian optimization algorithm designed to solve difficult optimization problems, in particular related to fitting computational models (e.g., via [maximum likelihood estimation](https://en.wikipedia.org/wiki/Maximum_likelihood_estimation)).
 
 BADS has been intensively tested for fitting behavioral, cognitive, and neural models, and is currently being used in many computational labs around the world.
 In our benchmark with real model-fitting problems, BADS performed on par or better than many other common and state-of-the-art MATLAB optimizers, such as `fminsearch`, `fmincon`, and `cmaes` [[1](#reference)].
@@ -48,7 +47,7 @@ For practical recommendations, such as how to set `LB` and `UB`, and any other q
 
 *Note*: BADS is a *semi-local* optimization algorithm, in that it can escape local minima better than many other methods — but it can still get stuck. The best performance for BADS is obtained by running the algorithm multiple times from distinct starting points (see [here](https://github.com/acerbilab/bads/wiki#how-do-i-choose-the-starting-point-x0)).
 
-## How does it work
+## How does it work?
 
 BADS follows a [mesh adaptive direct search](http://epubs.siam.org/doi/abs/10.1137/040603371) (MADS) procedure for function minimization that alternates **poll** steps and **search** steps (see **Fig 1**). 
 
@@ -72,10 +71,7 @@ This project is under active development. If you find a bug, or anything that ne
 
 ## BADS for other programming languages
 
-BADS is currently available only for MATLAB. A Python version is being planned.
-
-If you are interested in porting BADS to Python or another language (R, [Julia](https://julialang.org/)), please get in touch at <luigi.acerbi@helsinki.fi> (putting  'BADS' in the subject of the email); I'd be willing to help.
-However, before contacting me for this reason, please have a good look at the codebase here on GitHub, and at the paper [[1](#reference)]. BADS is a fairly complex piece of software, so be aware that porting it will require considerable effort and programming skills.
+BADS is currently available for MATLAB. A Python port, PyBADS, will be released soon (end of 2022).
 
 ## Reference
 
