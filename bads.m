@@ -1,5 +1,5 @@
 function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PUB,nonbcon,options,varargin)
-%BADS Constrained optimization using Bayesian Adaptive Direct Search (v1.0.8)
+%BADS Constrained optimization using Bayesian Adaptive Direct Search (v1.1.0)
 %   BADS attempts to solve problems of the form:
 %       min F(X)  subject to:  LB <= X <= UB
 %        X                        C(X) <= 0        (optional)
@@ -116,8 +116,8 @@ function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PU
 %
 %   See BADS_EXAMPLES for more examples. The most recent version of the 
 %   algorithm and additional documentation can be found here:
-%   https://github.com/lacerbi/bads
-%   Also, check out the FAQ: https://github.com/lacerbi/bads/wiki
+%   https://github.com/acerbilab/bads
+%   Also, check out the FAQ: https://github.com/acerbilab/bads/wiki
 %
 %   Reference: Acerbi, L. & Ma, W. J. (2017). "Practical Bayesian 
 %   Optimization for Model Fitting with Bayesian Adaptive Direct Search". 
@@ -132,21 +132,17 @@ function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PU
 % (http://www.gnu.org/copyleft/gpl.html).
 %
 %   Author (copyright): Luigi Acerbi, 2017-2022
-%   e-mail: luigi.acerbi@{gmail.com,nyu.edu}
+%   e-mail: luigi.acerbi@helsinki.fi
 %   URL: http://luigiacerbi.com
-%   Version: 1.0.8
-%   Release date: May 9, 2022
-%   Code repository: https://github.com/lacerbi/bads
+%   Version: 1.1.0
+%   Release date: Nov 2, 2022
+%   Code repository: https://github.com/acerbilab/bads
 %--------------------------------------------------------------------------
-
-% Old syntax X = BADS(FUN,X0,LB,UB,PLB,PUB,OPTIONS) should work fine but 
-% users are encouraged to update to new syntax of BADS which takes seventh 
-% argument as NONBCON and OPTIONS is passed as eight argument.
 
 %% Start timer
 
 t0 = tic;
-bads_version = '1.0.8';
+bads_version = '1.1.0';
 
 %% Basic default options
 
@@ -288,11 +284,6 @@ defopts.WarpFunc                = '0                    % GP warping function ty
 defopts.UncertainIncumbent      = 'yes                  % Treat incumbent as if uncertain regardless of uncertainty handling';
 defopts.MeshNoiseMultiplier     = '0.5                  % Contribution to log noise magnitude from log mesh size (0 for noisy functions)';
 
-% Adaptive basis (unsupported)
-defopts.HessianUpdate           = 'no                   % Update Hessian as you go';
-defopts.HessianMethod           = 'bfgs                 % Hessian update method';
-defopts.HessianAlternate        = 'no                   % Alternate Hessian iterations';
-
 % Hedge heuristic parameters (currently used during the search stage)
 defopts.HedgeGamma              = '0.125';
 defopts.HedgeBeta               = '1e-3/options.TolFun';
@@ -316,17 +307,6 @@ if nargin < 5; PLB = []; end
 if nargin < 6; PUB = []; end
 if nargin < 7; nonbcon = []; end
 if nargin < 8; options = []; end
-
-% Retro-compatibility with older interface without NONBCON
-if ~isempty(nonbcon) && isstruct(nonbcon)
-    if ~isempty(options)
-        nvarargin = numel(varargin);
-        for i = nvarargin+1:-1:2; varargin{i} = varargin{i-1}; end
-        varargin{1} = options;
-    end
-    options = nonbcon;
-    nonbcon = [];
-end
 
 %% Initialize display printing options
 
@@ -544,7 +524,7 @@ while ~isFinished_flag
         
         if isempty(gpstruct.post)
             % Local GP approximation on current point
-            [gpstruct,gptempflag] = gpTrainingSet(gpstruct, ...
+            [gpstruct,gptempflag] = gpupdate(gpstruct, ...
                 options.gpMethod, ...
                 u, ...
                 [], ...    %             [upoll; gridunits(x,optimState)], ...
@@ -651,7 +631,7 @@ while ~isFinished_flag
             
             % Add search point to training set
             if ~isempty(usearch) && optimState.searchcount < options.SearchNtry
-                gpstruct = gpTrainingSet(gpstruct, ...
+                gpstruct = gpupdate(gpstruct, ...
                     'add', ...
                     usearch, ...
                     [ysearch,ysearch_sd], ...
@@ -661,7 +641,7 @@ while ~isFinished_flag
             end
             
             if optimState.UncertaintyHandling
-                gpstructnew = gpTrainingSet(gpstruct, ...
+                gpstructnew = gpupdate(gpstruct, ...
                     options.gpMethod, ...
                     usearch, ...
                     [], ...
@@ -690,14 +670,7 @@ while ~isFinished_flag
             fsearchsd = 0;
             searchdist = 0;
         end
-        
-        %------------------------------------------------------------------
-        % CMA-ES like estimation of local covariance structure (unused)
-        if options.HessianUpdate && strcmpi(options.HessianMethod,'cmaes')
-            optimState = covmatadapt(u,LB,UB,gpstruct,optimState,options);
-        end
-        %------------------------------------------------------------------
-                
+                        
         % Evaluate search
         
         SearchImprovement = EvalImprovement(fval,fsearch,fsd,fsearchsd,options.ImprovementQuantile);
@@ -735,15 +708,7 @@ while ~isFinished_flag
         else
             % Search failed
             searchstatus = 'failure';
-            searchstring = [];
-            
-            % Decay of local curvature estimate
-            %if options.HessianUpdate
-            %    c1 = 0.1/nvars;
-            %    rescaledLenscale = gpstruct.pollscale;
-            %    rescaledLenscale = rescaledLenscale/sqrt(sum(rescaledLenscale.^2));                
-            %    optimState.Binv = optimState.Binv*(1-c1) + c1*diag(rescaledLenscale.^2);
-            %end            
+            searchstring = [];            
         end
                         
         %------------------------------------------------------------------
@@ -862,7 +827,7 @@ while ~isFinished_flag
             
             % Local GP approximation around polled points
             if isempty(gpstruct.post)
-                [gpstruct,gptempflag] = gpTrainingSet(gpstruct, ...
+                [gpstruct,gptempflag] = gpupdate(gpstruct, ...
                     options.gpMethod, ...
                     u, ...
                     upoll, ...
@@ -942,7 +907,7 @@ while ~isFinished_flag
             
             if optimState.UncertaintyHandling
                 % Add just polled point to training set
-                gpstruct = gpTrainingSet(gpstruct, ...
+                gpstruct = gpupdate(gpstruct, ...
                     'add', ...
                     unew, ...
                     [ypoll,ypoll_sd], ...
@@ -1207,9 +1172,9 @@ if prnt > 1
     fprintf('\n%s\n', msg);    
     if optimState.UncertaintyHandling
         if numel(yval_vec) == 1
-            fprintf('Observed function value at minimum: %g (1 sample). Estimated: %g ± %g (GP mean ± SEM).\n\n', yval_vec(1), fval, fsd);
+            fprintf('Observed function value at minimum: %g (1 sample). Estimated: %g +/- %g (GP mean +/- SEM).\n\n', yval_vec(1), fval, fsd);
         else
-            fprintf('Estimated function value at minimum: %g ± %g (mean ± SEM from %d samples).\n\n', fval, fsd, numel(yval_vec));            
+            fprintf('Estimated function value at minimum: %g +/- %g (mean +/- SEM from %d samples).\n\n', fval, fsd, numel(yval_vec));            
         end
     else
         fprintf('Function value at minimum: %g.\n\n', fval);
@@ -1324,11 +1289,6 @@ optimState.yval = yvalnew;
 optimState.fval = fvalnew;
 optimState.fsd = fsdnew;
 
-% Update estimate of curvature (Hessian) -- not supported
-if options.HessianUpdate && ~strcmpi(options.HessianMethod,'cmaes')
-    updatehess(uold,fvalold,fsdold,unew,fvalnew,fsdnew,optimState,gpstruct,options);
-end
-
 end
 
 %--------------------------------------------------------------------------
@@ -1428,7 +1388,7 @@ for index = 1:iter
 
     ui = optimState.iterList.u(index,:);
 
-    gpstruct = gpTrainingSet(gpstruct, ...
+    gpstruct = gpupdate(gpstruct, ...
         options.gpMethod, ...
         ui, ...
         [], ...
@@ -1547,3 +1507,4 @@ end
 % 1.0.7 (May/06/2022) Fixed bug with user-specified noise.
 % 1.0.8 (May/09/2022) Extra fixes to uncertainty handling and user-specified 
 %                     noise, printing, output version number.
+% 1.1.0 (Nov/02/2022) Full support for user-specified (heteroskedastic) noise.

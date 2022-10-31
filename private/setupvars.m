@@ -1,5 +1,5 @@
 function [u0,LB,UB,PLB,PUB,MeshSizeInteger,optimState] = setupvars(x0,LB,UB,PLB,PUB,optimState,nonbcon,options,prnt)
-%INITVARS Initialize variables and transform coordinates.
+%SETUPVARS Initialize variables and transform coordinates.
 
 nvars = numel(x0);
 
@@ -120,22 +120,6 @@ if any(optimState.trinfo.logct) && prnt > 0
 end
 if any(optimState.periodicvars) && prnt > 0
     fprintf('Variables (index) defined with periodic boundaries: %s.\n',mat2str(find(optimState.periodicvars)));
-end
-
-
-% Setup covariance information (unused)
-if options.HessianUpdate
-    if strcmpi(options.HessianMethod,'cmaes')
-        D = ((PUB-PLB)./optimState.scale).^2/12;
-        optimState.Binv = diag(D/sum(D));
-        optimState.C = sqrt(optimState.Binv);
-    else
-        optimState.Binv = eye(nvars);        
-        optimState.C = eye(nvars);    
-    end
-    optimState.grad = ones(nvars,1);
-    optimState.violations = 0;
-    optimState.B = inv(optimState.Binv);
 end
 
 % Import prior function evaluations

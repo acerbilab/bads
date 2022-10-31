@@ -36,24 +36,9 @@ if isempty(gpstruct)
         case 'matern5'
             if covard;  gpstruct.cov = {@covMaternard_fast,5};
             else        gpstruct.cov = {@covMaterniso,5};   end
-        case 'pp0'
-            if covard;  gpstruct.cov = {@covPPard,0};
-            else        gpstruct.cov = {@covPPiso,0};   end            
-        case 'pp1'
-            if covard;  gpstruct.cov = {@covPPard,1};
-            else        gpstruct.cov = {@covPPiso,1};   end            
-        case 'pp2'
-            if covard;  gpstruct.cov = {@covPPard,2};
-            else        gpstruct.cov = {@covPPiso,2};   end            
-        case 'pp3'
-            if covard;  gpstruct.cov = {@covPPard,3};
-            else        gpstruct.cov = {@covPPiso,3};   end            
         case 'rq'
             if covard;  gpstruct.cov = {@covRQard_fast};
             else        gpstruct.cov = {@covRQiso};   end
-        case 'lin'
-            if covard;  gpstruct.cov = {@covSum,{@covConst,@covLINard}};
-            else        gpstruct.cov = {@covRQiso};   end            
         otherwise
             error(['Unknown covariance type ''' covtype ''' in GP definition.']);
     end
@@ -176,7 +161,8 @@ if isempty(gpstruct)
     gpstruct.bounds.lik{end+1} = [log(TolFun)-1; 5];
 
     %% GP mean function
-    gpstruct.hyp.mean = 0;
+    yy = sort(optimState.Y(1:optimState.Xmax));    
+    gpstruct.hyp.mean = median(yy(1:ceil(numel(yy)*0.8)));
 
     gpstruct.mean = @meanConst;             % Constant mean function
     if options.gpFixedMean

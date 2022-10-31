@@ -12,7 +12,7 @@ if options.SpecifyTargetNoise
     optimState.UncertaintyHandling = 1;
     if ~isempty(options.UncertaintyHandling) && ~options.UncertaintyHandling
         error('OPTIONS.SpecifyTargetNoise is ON (objective fcn with estimated noise output) but OPTIONS.UncertaintyHandling is OFF.');
-    end    
+    end
 else
     optimState.UncertaintyHandling = options.UncertaintyHandling;
 end
