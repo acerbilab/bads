@@ -6,7 +6,7 @@
 
 ## What is it?
 
-BADS is a fast hybrid Bayesian optimization algorithm designed to solve difficult optimization problems, in particular related to fitting computational models (e.g., via [maximum likelihood estimation](https://en.wikipedia.org/wiki/Maximum_likelihood_estimation)).
+BADS is a fast hybrid Bayesian optimization algorithm designed to solve difficult optimization problems, in particular related to fitting computational models (e.g., via [maximum likelihood estimation](https://en.wikipedia.org/wiki/Maximum_likelihood_estimation)). The original BADS paper was presented at *NeurIPS* in 2017 [[1](https://github.com/acerbilab/bads#reference)].
 
 BADS has been intensively tested for fitting behavioral, cognitive, and neural models, and is currently being used in many computational labs around the world.
 In our benchmark with real model-fitting problems, BADS performed on par or better than many other common and state-of-the-art MATLAB optimizers, such as `fminsearch`, `fmincon`, and `cmaes` [[1](#reference)].
@@ -68,9 +68,9 @@ See our paper for more details [[1](#reference)].
 If you have trouble doing something with BADS:
 
 - Check out the FAQ on the [BADS wiki](https://github.com/acerbilab/bads/wiki);
-- Contact me at <luigi.acerbi@helsinki.fi>, putting 'BADS' in the subject of the email.
+- Post a question in the `acerbilab` [Discussions forum](https://github.com/orgs/acerbilab/discussions).
 
-This project is under active development. If you find a bug, or anything that needs correction, please let me know.
+This project is under active development. If you find a bug, or anything that needs correction, please let us know.
 
 ## Reference
 
@@ -83,8 +83,21 @@ You can cite BADS in your work with something along the lines of
 Besides formal citations, you can demonstrate your appreciation for BADS in the following ways:
 
 - *Star* the BADS repository on GitHub;
-- [Follow me on Twitter](https://twitter.com/AcerbiLuigi) for updates about BADS and other projects I am involved with;
-- Tell me about your model-fitting problem and your experience with BADS (positive or negative) at <luigi.acerbi@helsinki.fi> (putting  'BADS' in the subject of the email).
+- [Follow Luigi Acerbi on Twitter](https://twitter.com/AcerbiLuigi) for updates about BADS and other projects from the lab;
+- Tell us about your model-fitting problem and your experience with BADS (positive or negative) in the lab [Discussions forum](https://github.com/orgs/acerbilab/discussions).
+
+### BibTex
+
+```
+@article{acerbi2017practical,
+  title={Practical {B}ayesian Optimization for Model Fitting with {B}ayesian Adaptive Direct Search},
+  author={Acerbi, Luigi and Ma, Wei Ji},
+  journal={Advances in Neural Information Processing Systems},
+  volume={30},
+  pages={1834--1844},
+  year={2017}
+}
+```
 
 ### License
 
