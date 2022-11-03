@@ -1,4 +1,4 @@
-function output = bads_output(fun,optimState,options,LB,UB,nonbcon,iter,x,msg,yval_vec,fval,fsd,totaltime,bads_version)
+function output = bads_output(fun,optimState,options,LB,UB,nonbcon,iter,x,msg,yval_vec,ysd_vec,fval,fsd,totaltime,bads_version)
 %BADS_OUTPUT Create OUTPUT struct for BADS.
 
 output.function = func2str(fun);    
@@ -35,6 +35,9 @@ output.message = msg;
 
 % Observed function value(s) at optimum (possibly multiple samples)
 output.yval = yval_vec;
+if ~isempty(ysd_vec)
+    output.ysd = ysd_vec;
+end
 
 % Return mean and SD of the estimated function value at the optimum
 output.fval = fval;

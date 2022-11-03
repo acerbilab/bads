@@ -1153,7 +1153,7 @@ if optimState.UncertaintyHandling && iter > 1
     % (only if FVAL is returned)
     if nargout > 1
         if options.NoiseFinalSamples > 0
-            [yval_vec,fval,fsd,optimState] = FinalEstimate(u,yval,funwrapper,optimState,gpstruct,options);
+            [yval_vec,ysd_vec,fval,fsd,optimState] = FinalEstimate(u,yval,funwrapper,optimState,gpstruct,options);
             optimState.iterList.fval(index) = fval;
             optimState.iterList.fsd(index) = fsd;
         end
@@ -1184,7 +1184,7 @@ end
 if nargout > 3    
     totaltime = toc(t0);
     output = bads_output(fun,optimState,options,LB,UB,nonbcon,iter,x, ...
-        msg,yval_vec,fval,fsd,totaltime,bads_version);
+        msg,yval_vec,ysd_vec,fval,fsd,totaltime,bads_version);
     
     % Return optimization struct (can be reused in future runs)
     if nargout > 4
@@ -1439,24 +1439,40 @@ end
 end
 
 %--------------------------------------------------------------------------
-function [yval_vec,fval,fsd,optimState] = FinalEstimate(u,yval,funwrapper,optimState,gpstruct,options)
+function [yval_vec,ysd_vec,fval,fsd,optimState] = FinalEstimate(u,yval,funwrapper,optimState,gpstruct,options)
 %FINALESTIMATE Estimate function value and standard deviation at final point.
 
 % Note that by default we do *not* use YVAL because it is biased 
 % (since it was an incumbent at some iteration, it is more likely to be a 
 % random fluctuation lower than the mean)
 yval_vec = NaN(1,options.NoiseFinalSamples);
+
+if options.SpecifyTargetNoise
+    ysd_vec = NaN(1,options.NoiseFinalSamples);
+else
+    ysd_vec = [];
+end
+
 for iSample = 1:options.NoiseFinalSamples
-    [yval_vec(iSample),optimState] = funlogger(funwrapper,u,optimState,'single');
+    [yval_vec(iSample),optimState,fsd] = funlogger(funwrapper,u,optimState,'single');
+    if options.SpecifyTargetNoise; ysd_vec(iSample) = fsd; end
 end
 
 % If there is only one sample, exceptionally we use YVAL (this will be 
 % biased but better than having no uncertainty information)
-if numel(yval_vec) == 1; yval_vec = [yval_vec, yval]; end
+if numel(yval_vec) == 1 && ~options.SpecifyTargetNoise
+    yval_vec = [yval_vec, yval];
+end
 
-% We do not trust the GP, simple mean and standard error of samples    
-fval = mean(yval_vec);
-fsd = std(yval_vec)/sqrt(numel(yval_vec));
+% We do not trust the GP, simple mean and standard error of samples
+if ~options.SpecifyTargetNoise
+    fval = mean(yval_vec);
+    fsd = std(yval_vec)/sqrt(numel(yval_vec));
+else
+    tot_prec = sum(1./ ysd_vec.^2);
+    fval = sum(yval_vec .* (1./ ysd_vec.^2)) / tot_prec;
+    fsd = 1 / sqrt(tot_prec);
+end
 
 end
 %--------------------------------------------------------------------------
