@@ -78,9 +78,10 @@ optimState.UBsearch(optimState.UBsearch > optimState.UB) = ...
 % Starting point in grid coordinates
 if any(~isfinite(x0))   % Invalid/not provided starting point
     if prnt > 0
-        fprintf('Initial starting point is invalid or not provided. Starting from center of plausible region.\n');
+        fprintf('Initial starting point is invalid or not provided.\nStarting from random point uniformly drawn from the plausible box.\n');
     end
-    u0 = force2grid(0.5*(PLB + PUB),optimState);    % Midpoint
+    u0 = rand(1,nvars).*(PUB - PLB) + PLB;
+    u0 = force2grid(u0,optimState);
     x0 = origunits(u0,optimState);
 else
     u0 = force2grid(gridunits(x0,optimState),optimState);

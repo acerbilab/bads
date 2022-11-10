@@ -266,7 +266,7 @@ options.MaxFunEvals         = 50;       % Very low budget of function evaluation
 options.Display             = 'final';  % Print only basic output ('off' turns off)
 options.UncertaintyHandling = false;    % The objective is deterministic
 
-% Custom output function, this one just ptints the iteration number 
+% Custom output function, this one just prints the iteration number 
 % (return FALSE to continue, TRUE to stop optimization)
 options.OutputFcn = @(x,optimState,state) ...
     ~isfinite(fprintf('%s %d... ', state, optimState.iter));

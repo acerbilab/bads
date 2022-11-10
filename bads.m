@@ -1134,6 +1134,7 @@ end
 
 % Re-evaluate all best points for noisy evaluations
 yval_vec = yval;
+ysd_vec = [];
 if optimState.UncertaintyHandling && iter > 1    
     optimState = reevaluateIterList(optimState,gpstruct,options);
         
