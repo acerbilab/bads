@@ -195,7 +195,7 @@ defopts.TolStallIters           = '4 + floor(nvars/2)   % Max iterations with no
 defopts.TolNoise                = 'sqrt(eps)*options.TolFun  % Min variability for a fcn to be considered noisy';
 
 % Initialization
-defopts.Ninit                   = '10 + nvars           % Number of initial objective fcn evaluations';
+defopts.Ninit                   = 'nvars                % Number of initial objective fcn evaluations';
 defopts.InitFcn                 = '@initSobol           % Initialization function';
 % defoptions.InitFcn            = '@initLHS';
 defopts.Restarts                = '0                    % Number of restart attempts';
