@@ -1,4 +1,4 @@
-# Bayesian Adaptive Direct Search (BADS) - v1.1.1
+# Bayesian Adaptive Direct Search (BADS) - v1.1.2
 
 #### News 
 - 31/Oct/22: BADS 1.1.1 released! Added full support for user-specified noise (e.g., for heteroskedastic targets) and several fixes.

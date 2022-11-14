@@ -1,5 +1,5 @@
 function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PUB,nonbcon,options,varargin)
-%BADS Constrained optimization using Bayesian Adaptive Direct Search (v1.1.1)
+%BADS Constrained optimization using Bayesian Adaptive Direct Search (v1.1.2)
 %   BADS attempts to solve problems of the form:
 %       min F(X)  subject to:  LB <= X <= UB
 %        X                        C(X) <= 0        (optional)
@@ -134,15 +134,15 @@ function [x,fval,exitflag,output,optimState,gpstruct] = bads(fun,x0,LB,UB,PLB,PU
 %   Author (copyright): Luigi Acerbi, 2017-2022
 %   e-mail: luigi.acerbi@helsinki.fi
 %   URL: http://luigiacerbi.com
-%   Version: 1.1.1
-%   Release date: Oct 31, 2022
+%   Version: 1.1.2
+%   Release date: Nov 14, 2022
 %   Code repository: https://github.com/acerbilab/bads
 %--------------------------------------------------------------------------
 
 %% Start timer
 
 t0 = tic;
-bads_version = '1.1.1';
+bads_version = '1.1.2';
 
 %% Basic default options
 
@@ -195,7 +195,7 @@ defopts.TolStallIters           = '4 + floor(nvars/2)   % Max iterations with no
 defopts.TolNoise                = 'sqrt(eps)*options.TolFun  % Min variability for a fcn to be considered noisy';
 
 % Initialization
-defopts.Ninit                   = '10 + nvars           % Number of initial objective fcn evaluations';
+defopts.Ninit                   = 'nvars                % Number of initial objective fcn evaluations';
 defopts.InitFcn                 = '@initSobol           % Initialization function';
 % defoptions.InitFcn            = '@initLHS';
 defopts.Restarts                = '0                    % Number of restart attempts';
@@ -1134,6 +1134,7 @@ end
 
 % Re-evaluate all best points for noisy evaluations
 yval_vec = yval;
+ysd_vec = [];
 if optimState.UncertaintyHandling && iter > 1    
     optimState = reevaluateIterList(optimState,gpstruct,options);
         
@@ -1153,7 +1154,7 @@ if optimState.UncertaintyHandling && iter > 1
     % (only if FVAL is returned)
     if nargout > 1
         if options.NoiseFinalSamples > 0
-            [yval_vec,fval,fsd,optimState] = FinalEstimate(u,yval,funwrapper,optimState,gpstruct,options);
+            [yval_vec,ysd_vec,fval,fsd,optimState] = FinalEstimate(u,yval,funwrapper,optimState,gpstruct,options);
             optimState.iterList.fval(index) = fval;
             optimState.iterList.fsd(index) = fsd;
         end
@@ -1184,7 +1185,7 @@ end
 if nargout > 3    
     totaltime = toc(t0);
     output = bads_output(fun,optimState,options,LB,UB,nonbcon,iter,x, ...
-        msg,yval_vec,fval,fsd,totaltime,bads_version);
+        msg,yval_vec,ysd_vec,fval,fsd,totaltime,bads_version);
     
     % Return optimization struct (can be reused in future runs)
     if nargout > 4
@@ -1439,24 +1440,40 @@ end
 end
 
 %--------------------------------------------------------------------------
-function [yval_vec,fval,fsd,optimState] = FinalEstimate(u,yval,funwrapper,optimState,gpstruct,options)
+function [yval_vec,ysd_vec,fval,fsd,optimState] = FinalEstimate(u,yval,funwrapper,optimState,gpstruct,options)
 %FINALESTIMATE Estimate function value and standard deviation at final point.
 
 % Note that by default we do *not* use YVAL because it is biased 
 % (since it was an incumbent at some iteration, it is more likely to be a 
 % random fluctuation lower than the mean)
 yval_vec = NaN(1,options.NoiseFinalSamples);
+
+if options.SpecifyTargetNoise
+    ysd_vec = NaN(1,options.NoiseFinalSamples);
+else
+    ysd_vec = [];
+end
+
 for iSample = 1:options.NoiseFinalSamples
-    [yval_vec(iSample),optimState] = funlogger(funwrapper,u,optimState,'single');
+    [yval_vec(iSample),optimState,fsd] = funlogger(funwrapper,u,optimState,'single');
+    if options.SpecifyTargetNoise; ysd_vec(iSample) = fsd; end
 end
 
 % If there is only one sample, exceptionally we use YVAL (this will be 
 % biased but better than having no uncertainty information)
-if numel(yval_vec) == 1; yval_vec = [yval_vec, yval]; end
+if numel(yval_vec) == 1 && ~options.SpecifyTargetNoise
+    yval_vec = [yval_vec, yval];
+end
 
-% We do not trust the GP, simple mean and standard error of samples    
-fval = mean(yval_vec);
-fsd = std(yval_vec)/sqrt(numel(yval_vec));
+% We do not trust the GP, simple mean and standard error of samples
+if ~options.SpecifyTargetNoise
+    fval = mean(yval_vec);
+    fsd = std(yval_vec)/sqrt(numel(yval_vec));
+else
+    tot_prec = sum(1./ ysd_vec.^2);
+    fval = sum(yval_vec .* (1./ ysd_vec.^2)) / tot_prec;
+    fsd = 1 / sqrt(tot_prec);
+end
 
 end
 %--------------------------------------------------------------------------
@@ -1508,3 +1525,4 @@ end
 % 1.0.8 (May/09/2022) Extra fixes to uncertainty handling and user-specified 
 %                     noise, printing, output version number.
 % 1.1.1 (Oct/31/2022) Full support for user-specified (heteroskedastic) noise.
+% 1.1.2 (Nov/14/2022) Minor fixes to heteroskedastic noise.
