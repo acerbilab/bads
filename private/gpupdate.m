@@ -259,7 +259,7 @@ end
 err_index = ~isfinite(gpstruct.y);
 if any(err_index)
     [ypenalty,idx1] = max(gpstruct.y(~err_index));
-    idx_values = find(~error_index);
+    idx_values = find(~err_index);
     gpstruct.y(err_index) = ypenalty;
     if isfield(optimState,'S'); gpstruct.s(err_index) = gpstruct.s(idx_values(idx1)); end
 end
