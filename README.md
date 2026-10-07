@@ -1,6 +1,9 @@
 # Bayesian Adaptive Direct Search (BADS) - v1.1.3
 
+BADS is one of the [open-source tools for fitting models to data](https://acerbilab.org/model-fitting/) from [Luigi Acerbi's group](https://www.helsinki.fi/en/researchgroups/machine-and-human-intelligence) at the University of Helsinki.
+
 #### News 
+- 06/Oct/26: PyBADS 1.5 released! [PyBADS](https://github.com/acerbilab/pybads) is BADS in Python; version 1.5 is faster than earlier versions and was checked line by line against this MATLAB version (see [what's new](https://github.com/acerbilab/pybads#whats-new-in-pybads-15)).
 - 31/Oct/22: BADS 1.1.1 released! Added full support for user-specified noise (e.g., for heteroskedastic targets) and several fixes.
 - If you are interested in Bayesian model fitting, check out [Variational Bayesian Monte Carlo (VBMC)](https://github.com/acerbilab/vbmc), a simple and user-friendly toolbox for Bayesian posterior and model inference that we published at NeurIPS (2018, 2020).
 
@@ -18,7 +21,7 @@ BADS requires no specific tuning and runs off-the-shelf like other built-in MATL
 #### Notes
 
 - If you are interested in estimating posterior distributions (i.e., uncertainty and error bars) over parameters, and not just point estimates, you might want to check out [Variational Bayesian Monte Carlo](https://github.com/acerbilab/vbmc), a toolbox for Bayesian posterior and model inference which can be used in synergy with BADS.
-- BADS is currently available only for MATLAB. A Python port, PyBADS, will be released soon (end of 2022).
+- BADS is also available in Python as [PyBADS](https://github.com/acerbilab/pybads) (`pip install pybads`). The PyBADS FAQ lists [what differs from BADS in MATLAB](https://acerbilab.org/pybads/faq.html#faq-i-used-bads-in-matlab-what-is-different-in-pybads).
 
 ## Installation
 
